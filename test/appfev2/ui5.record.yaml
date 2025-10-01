@@ -1,0 +1,62 @@
+specVersion: "3.1"
+type: application
+metadata:
+  name: appfev2
+framework:
+  name: SAPUI5
+  version: 1.136.8
+  libraries:
+    - name: sap.m
+    - name: sap.ui.core
+    - name: sap.ushell
+    - name: sap.f
+    - name: sap.ui.comp
+    - name: sap.ui.generic.app
+    - name: sap.suite.ui.generic.template
+    - name: themelib_sap_horizon
+server:
+  customMiddleware:
+    - name: fiori-tools-proxy
+      afterMiddleware: compression
+      configuration:
+        ignoreCertErrors: false
+        backend:
+          - path: /v2
+            url: http://localhost:4006
+        ui5:
+          path:
+            - /resources
+            - /test-resources
+          url: https://ui5.sap.com
+    # Livereload disabled during recording to prevent reload loops
+    # - name: fiori-tools-appreload
+    #   afterMiddleware: compression
+    #   configuration:
+    #     port: 35729
+    #     path: webapp
+    #     delay: 300
+    - name: fiori-tools-preview
+      afterMiddleware: compression
+      configuration:
+        flp:
+          theme: sap_horizon
+    - name: ui5-middleware-odata-recorder
+      beforeMiddleware: fiori-tools-proxy
+      configuration:
+        controlEndpoints: true        # default: true - Enable /__recorder/* HTTP endpoints
+        autoSave: "stream"            # default: "stream" - Options: "stream" | "onStop"
+        writeMetadata: true           # default: true - Capture and write $metadata
+        defaultTenant: "100"          # default: "100" - Default tenant if not in request
+        debug: true                   # default: false - Enable debug logging
+        redact: []                    # default: [] - Field names to remove from entities (e.g. ["Token", "Password"])
+        services:
+          - alias: mainService
+            version: v2
+            basePath: /v2/orders/
+            targetDir: webapp/localService/mainService/data
+          - alias: booksService
+            version: v2
+            basePath: /v2/books/
+            targetDir: webapp/localService/booksService/data
+
+

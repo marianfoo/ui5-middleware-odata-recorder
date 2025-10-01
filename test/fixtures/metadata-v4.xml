@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+  <edmx:DataServices>
+    <Schema Namespace="OrdersService" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+      <EntityType Name="Orders">
+        <Key>
+          <PropertyRef Name="ID"/>
+        </Key>
+        <Property Name="ID" Type="Edm.Guid" Nullable="false"/>
+        <Property Name="OrderNo" Type="Edm.String"/>
+        <Property Name="buyer" Type="Edm.String"/>
+        <Property Name="total" Type="Edm.Decimal"/>
+        <NavigationProperty Name="customer" Type="OrdersService.Customers"/>
+      </EntityType>
+      <EntityType Name="Customers">
+        <Key>
+          <PropertyRef Name="ID"/>
+        </Key>
+        <Property Name="ID" Type="Edm.Guid" Nullable="false"/>
+        <Property Name="name" Type="Edm.String"/>
+      </EntityType>
+      <EntityType Name="OrderItems">
+        <Key>
+          <PropertyRef Name="OrderID"/>
+          <PropertyRef Name="ItemID"/>
+        </Key>
+        <Property Name="OrderID" Type="Edm.Guid" Nullable="false"/>
+        <Property Name="ItemID" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="product" Type="Edm.String"/>
+        <Property Name="quantity" Type="Edm.Int32"/>
+      </EntityType>
+      <EntityContainer Name="EntityContainer">
+        <EntitySet Name="Orders" EntityType="OrdersService.Orders"/>
+        <EntitySet Name="Customers" EntityType="OrdersService.Customers"/>
+        <EntitySet Name="OrderItems" EntityType="OrdersService.OrderItems"/>
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>
+

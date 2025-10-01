@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="1.0" xmlns:edmx="http://schemas.microsoft.com/ado/2007/06/edmx" xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata">
+  <edmx:DataServices m:DataServiceVersion="2.0">
+    <Schema Namespace="OrdersService" xmlns="http://schemas.microsoft.com/ado/2008/09/edm">
+      <EntityType Name="Orders">
+        <Key>
+          <PropertyRef Name="ID"/>
+        </Key>
+        <Property Name="ID" Type="Edm.Guid" Nullable="false"/>
+        <Property Name="OrderNo" Type="Edm.String"/>
+        <Property Name="buyer" Type="Edm.String"/>
+        <Property Name="total" Type="Edm.Decimal"/>
+        <NavigationProperty Name="customer" Relationship="OrdersService.Orders_customer" FromRole="Orders" ToRole="Customers"/>
+      </EntityType>
+      <EntityType Name="Customers">
+        <Key>
+          <PropertyRef Name="ID"/>
+        </Key>
+        <Property Name="ID" Type="Edm.Guid" Nullable="false"/>
+        <Property Name="name" Type="Edm.String"/>
+      </EntityType>
+      <EntityType Name="OrderItems">
+        <Key>
+          <PropertyRef Name="OrderID"/>
+          <PropertyRef Name="ItemID"/>
+        </Key>
+        <Property Name="OrderID" Type="Edm.Guid" Nullable="false"/>
+        <Property Name="ItemID" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="product" Type="Edm.String"/>
+        <Property Name="quantity" Type="Edm.Int32"/>
+      </EntityType>
+      <Association Name="Orders_customer">
+        <End Type="OrdersService.Orders" Multiplicity="*" Role="Orders"/>
+        <End Type="OrdersService.Customers" Multiplicity="0..1" Role="Customers"/>
+      </Association>
+      <EntityContainer Name="EntityContainer" m:IsDefaultEntityContainer="true">
+        <EntitySet Name="Orders" EntityType="OrdersService.Orders"/>
+        <EntitySet Name="Customers" EntityType="OrdersService.Customers"/>
+        <EntitySet Name="OrderItems" EntityType="OrdersService.OrderItems"/>
+        <AssociationSet Name="Orders_customer" Association="OrdersService.Orders_customer">
+          <End EntitySet="Orders" Role="Orders"/>
+          <End EntitySet="Customers" Role="Customers"/>
+        </AssociationSet>
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>
+

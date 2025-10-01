@@ -1,0 +1,34 @@
+{
+  "name": "@capire/orders",
+  "version": "2.0.1",
+  "description": "A generic reuse service for managing orders.",
+  "repository": "https://github.com/capire/orders",
+  "dependencies": {
+    "@cap-js/hana": ">=1",
+    "@cap-js/sqlite": ">=1",
+    "@capire/common": "../common",
+    "@sap/cds": "^8",
+    "@sap/xssec": "^4",
+    "@cap-js-community/odata-v2-adapter": "^1.15.4"
+  },
+  "cds": {
+    "requires": {
+      "messaging": true,
+      "db": true
+    },
+    "cov2ap": {
+      "plugin": true,
+      "path": "v2"
+    }
+  },
+  "scripts": {
+    "start": "cds-serve",
+    "watch": "cds watch"
+  },
+  "workspaces": [
+    "app/*"
+  ],
+  "sapux": [
+    "app/project1"
+  ]
+}

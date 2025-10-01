@@ -1,0 +1,52 @@
+[
+  {
+    "ID": "11111111-1111-1111-1111-111111111111",
+    "name": "John Smith",
+    "email": "john.smith@example.com",
+    "country": "US",
+    "__metadata": {
+      "type": "sap.capire.orders.api.OrdersService.Customers",
+      "uri": "http://localhost:4006/v2/orders/Customers(guid'11111111-1111-1111-1111-111111111111')"
+    }
+  },
+  {
+    "ID": "22222222-2222-2222-2222-222222222222",
+    "name": "Maria Garcia",
+    "email": "maria.garcia@example.com",
+    "country": "ES",
+    "__metadata": {
+      "type": "sap.capire.orders.api.OrdersService.Customers",
+      "uri": "http://localhost:4006/v2/orders/Customers(guid'22222222-2222-2222-2222-222222222222')"
+    }
+  },
+  {
+    "ID": "33333333-3333-3333-3333-333333333333",
+    "name": "Hans Mueller",
+    "email": "hans.mueller@example.com",
+    "country": "DE",
+    "__metadata": {
+      "type": "sap.capire.orders.api.OrdersService.Customers",
+      "uri": "http://localhost:4006/v2/orders/Customers(guid'33333333-3333-3333-3333-333333333333')"
+    }
+  },
+  {
+    "ID": "44444444-4444-4444-4444-444444444444",
+    "name": "Sophie Dubois",
+    "email": "sophie.dubois@example.com",
+    "country": "FR",
+    "__metadata": {
+      "type": "sap.capire.orders.api.OrdersService.Customers",
+      "uri": "http://localhost:4006/v2/orders/Customers(guid'44444444-4444-4444-4444-444444444444')"
+    }
+  },
+  {
+    "ID": "55555555-5555-5555-5555-555555555555",
+    "name": "Yuki Tanaka",
+    "email": "yuki.tanaka@example.com",
+    "country": "JP",
+    "__metadata": {
+      "type": "sap.capire.orders.api.OrdersService.Customers",
+      "uri": "http://localhost:4006/v2/orders/Customers(guid'55555555-5555-5555-5555-555555555555')"
+    }
+  }
+]

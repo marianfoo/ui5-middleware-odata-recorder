@@ -1,0 +1,6 @@
+ID;createdAt;createdBy;modifiedAt;modifiedBy;title;descr;author_ID;genre;stock;price;currency_code
+bbb11111-1111-1111-1111-111111111111;2024-01-01;system;2024-01-01;system;Wuthering Heights;A passionate tale of love and revenge on the Yorkshire moors;aaa11111-1111-1111-1111-111111111111;Romance;25;11.11;EUR
+bbb22222-2222-2222-2222-222222222222;2024-01-01;system;2024-01-01;system;Jane Eyre;An orphaned girl becomes a governess and finds love;aaa22222-2222-2222-2222-222222222222;Romance;30;12.50;EUR
+bbb33333-3333-3333-3333-333333333333;2024-01-01;system;2024-01-01;system;The Raven;A narrative poem of mystery and macabre;aaa33333-3333-3333-3333-333333333333;Poetry;50;8.99;USD
+bbb44444-4444-4444-4444-444444444444;2024-01-01;system;2024-01-01;system;Catweazle;Adventures of a time-traveling wizard;aaa44444-4444-4444-4444-444444444444;Fantasy;15;15.00;GBP
+bbb55555-5555-5555-5555-555555555555;2024-01-01;system;2024-01-01;system;The Tell-Tale Heart;A psychological thriller about guilt;aaa33333-3333-3333-3333-333333333333;Horror;20;9.99;USD

@@ -1,0 +1,33 @@
+# Development files - not needed in published package
+test/
+docs/
+src/
+*.log
+*.tgz
+
+# Note: lib/ is a manual entry point file - it IS included in the package
+
+# Configuration files
+.git/
+.github/
+.gitignore
+.DS_Store
+tsconfig.json
+jest.config.ts
+
+# Documentation (except README.md which is included)
+GETTING_STARTED.md
+TESTING_GUIDE.md
+TODO.md
+OLD_README.md
+MIDDLEWARE_README.md
+
+# Build scripts
+setup.sh
+
+# Node modules (users install their own)
+node_modules/
+
+# Lock files (users manage their own)
+package-lock.json
+

@@ -1,0 +1,208 @@
+{
+  "_version": "1.73.1",
+  "sap.app": {
+    "id": "appfev4",
+    "type": "application",
+    "i18n": "i18n/i18n.properties",
+    "applicationVersion": {
+      "version": "0.0.1"
+    },
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "resources": "resources.json",
+    "sourceTemplate": {
+      "id": "@sap/generator-fiori:lrop",
+      "version": "1.19.0",
+      "toolsId": "aa15a852-dc1b-4be7-a015-516c07ab7a74"
+    },
+    "dataSources": {
+      "annotation": {
+        "type": "ODataAnnotation",
+        "uri": "annotations/annotation.xml",
+        "settings": {
+          "localUri": "annotations/annotation.xml"
+        }
+      },
+      "mainService": {
+        "uri": "/odata/v4/orders/",
+        "type": "OData",
+        "settings": {
+          "annotations": [
+            "annotation"
+          ],
+          "localUri": "localService/mainService/metadata.xml",
+          "odataVersion": "4.0"
+        }
+      },
+      "booksService": {
+        "uri": "/odata/v4/books/",
+        "type": "OData",
+        "settings": {
+          "annotations": [],
+          "odataVersion": "4.0"
+        }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "icons": {
+      "icon": "",
+      "favIcon": "",
+      "phone": "",
+      "phone@2": "",
+      "tablet": "",
+      "tablet@2": ""
+    },
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "flexEnabled": true,
+    "dependencies": {
+      "minUI5Version": "1.136.8",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.core": {},
+        "sap.fe.templates": {}
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "models": {
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": {
+          "bundleName": "appfev4.i18n.i18n"
+        }
+      },
+      "": {
+        "dataSource": "mainService",
+        "preload": true,
+        "settings": {
+          "operationMode": "Server",
+          "autoExpandSelect": true,
+          "earlyRequests": true
+        }
+      },
+      "@i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "uri": "i18n/i18n.properties"
+      },
+      "books": {
+        "dataSource": "booksService",
+        "preload": true,
+        "settings": {
+          "operationMode": "Server",
+          "autoExpandSelect": true,
+          "earlyRequests": false
+        }
+      }
+    },
+    "resources": {
+      "css": []
+    },
+    "extends": {
+      "extensions": {
+        "sap.ui.controllerExtensions": {
+          "sap.fe.templates.ListReport.ListReportController": {
+            "controllerName": "appfev4.ext.controller.ListReportExt"
+          }
+        }
+      }
+    },
+    "routing": {
+      "config": {},
+      "routes": [
+        {
+          "pattern": ":?query:",
+          "name": "OrdersList",
+          "target": "OrdersList"
+        },
+        {
+          "pattern": "Orders({key}):?query:",
+          "name": "OrdersObjectPage",
+          "target": "OrdersObjectPage"
+        },
+        {
+          "pattern": "Orders({key})/Items({key2}):?query:",
+          "name": "Orders_ItemsObjectPage",
+          "target": "Orders_ItemsObjectPage"
+        }
+      ],
+      "targets": {
+        "OrdersList": {
+          "type": "Component",
+          "id": "OrdersList",
+          "name": "sap.fe.templates.ListReport",
+          "options": {
+            "settings": {
+              "contextPath": "/Orders",
+              "variantManagement": "Page",
+              "navigation": {
+                "Orders": {
+                  "detail": {
+                    "route": "OrdersObjectPage"
+                  }
+                }
+              },
+              "controlConfiguration": {
+                "@com.sap.vocabularies.UI.v1.LineItem": {
+                  "tableSettings": {
+                    "type": "ResponsiveTable"
+                  },
+                  "actions": {
+                    "ShowBooks": {
+                      "press": "appfev4.ext.controller.ListReportExt.onShowBooks",
+                      "visible": true,
+                      "enabled": true,
+                      "text": "Show Available Books"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "OrdersObjectPage": {
+          "type": "Component",
+          "id": "OrdersObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": {
+              "editableHeaderContent": false,
+              "contextPath": "/Orders",
+              "navigation": {
+                "Items": {
+                  "detail": {
+                    "route": "Orders_ItemsObjectPage"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Orders_ItemsObjectPage": {
+          "type": "Component",
+          "id": "Orders_ItemsObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": {
+              "editableHeaderContent": false,
+              "contextPath": "/Orders/Items"
+            }
+          }
+        }
+      }
+    }
+  },
+  "sap.fiori": {
+    "registrationIds": [],
+    "archeType": "transactional"
+  }
+}

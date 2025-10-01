@@ -1,0 +1,72 @@
+[
+  {
+    "ID": "bbb11111-1111-1111-1111-111111111111",
+    "genre": "Romance 100",
+    "price": 11.11,
+    "stock": 25,
+    "title": "Wuthering Heights",
+    "author": {
+      "ID": "aaa11111-1111-1111-1111-111111111111",
+      "name": "Emily Brontë"
+    },
+    "currency": {
+      "code": "EUR"
+    }
+  },
+  {
+    "ID": "bbb22222-2222-2222-2222-222222222222",
+    "genre": "Romance",
+    "price": 12.5,
+    "stock": 30,
+    "title": "Jane Eyre",
+    "author": {
+      "ID": "aaa22222-2222-2222-2222-222222222222",
+      "name": "Charlotte Brontë"
+    },
+    "currency": {
+      "code": "EUR"
+    }
+  },
+  {
+    "ID": "bbb33333-3333-3333-3333-333333333333",
+    "genre": "Poetry",
+    "price": 8.99,
+    "stock": 50,
+    "title": "The Raven",
+    "author": {
+      "ID": "aaa33333-3333-3333-3333-333333333333",
+      "name": "Edgar Allan Poe"
+    },
+    "currency": {
+      "code": "USD"
+    }
+  },
+  {
+    "ID": "bbb44444-4444-4444-4444-444444444444",
+    "genre": "Fantasy",
+    "price": 15,
+    "stock": 15,
+    "title": "Catweazle",
+    "author": {
+      "ID": "aaa44444-4444-4444-4444-444444444444",
+      "name": "Richard Carpenter"
+    },
+    "currency": {
+      "code": "GBP"
+    }
+  },
+  {
+    "ID": "bbb55555-5555-5555-5555-555555555555",
+    "genre": "Horror",
+    "price": 9.99,
+    "stock": 20,
+    "title": "The Tell-Tale Heart",
+    "author": {
+      "ID": "aaa33333-3333-3333-3333-333333333333",
+      "name": "Edgar Allan Poe"
+    },
+    "currency": {
+      "code": "USD"
+    }
+  }
+]

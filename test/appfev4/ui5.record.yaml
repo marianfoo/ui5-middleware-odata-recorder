@@ -1,0 +1,65 @@
+specVersion: "3.1"
+type: application
+metadata:
+  name: appfev4
+framework:
+  name: SAPUI5
+  version: 1.136.8
+  libraries:
+    - name: sap.ui.core
+    - name: sap.m
+server:
+  customMiddleware:
+    - name: fiori-tools-proxy
+      afterMiddleware: compression
+      configuration:
+        ignoreCertErrors: false
+        backend:
+          - path: /odata
+            url: http://localhost:4006
+        ui5:
+          path:
+            - /resources
+            - /test-resources
+          url: https://sapui5.hana.ondemand.com
+    - name: ui5-tooling-transpile-middleware
+      afterMiddleware: compression
+      configuration:
+        debug: true
+        transformModulesToUI5:
+          overridesToOverride: true
+        excludePatterns:
+          - /Component-preload.js
+    # Livereload disabled during recording to prevent reload loops
+    # - name: fiori-tools-appreload
+    #   afterMiddleware: compression
+    #   configuration:
+    #     port: 35729
+    #     path: webapp
+    #     delay: 300
+    - name: ui5-middleware-odata-recorder
+      beforeMiddleware: fiori-tools-proxy
+      configuration:
+        controlEndpoints: true        # default: true - Enable /__recorder/* HTTP endpoints
+        autoSave: "stream"            # default: "stream" - Options: "stream" | "onStop"
+        writeMetadata: true           # default: true - Capture and write $metadata
+        defaultTenant: "100"          # default: "100" - Default tenant if not in request
+        debug: true                   # default: false - Enable debug logging
+        redact: []                    # default: [] - Field names to remove from entities (e.g. ["Token", "Password"])
+        services:
+          - alias: mainService
+            version: v4
+            basePath: /odata/v4/orders/
+            targetDir: webapp/localService/mainService/data
+          - alias: booksService
+            version: v4
+            basePath: /odata/v4/books/
+            targetDir: webapp/localService/booksService/data
+builder:
+  customTasks:
+    - name: ui5-tooling-transpile-task
+      afterTask: replaceVersion
+      configuration:
+        debug: true
+        transformModulesToUI5:
+          overridesToOverride: true

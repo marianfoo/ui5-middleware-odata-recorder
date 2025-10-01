@@ -1,0 +1,33 @@
+{
+  "generationParameters": {
+    "generationDate": "Wed Oct 01 2025 10:15:41 GMT+0200 (Central European Summer Time)",
+    "generatorPlatform": "CLI",
+    "serviceType": "OData URL",
+    "metadataFilename": "",
+    "serviceUrl": "http://localhost:4006/v2/orders",
+    "appName": "appfev2",
+    "appTitle": "App V2 FE",
+    "appDescription": "An SAP Fiori application.",
+    "appNamespace": "",
+    "ui5Theme": "sap_horizon",
+    "ui5Version": "1.136.8",
+    "enableCodeAssist": false,
+    "enableEslint": false,
+    "enableTypeScript": false,
+    "showMockDataInfo": true,
+    "generatorVersion": "1.19.0",
+    "template": "List Report Page V2",
+    "generatorName": "SAP Fiori Application Generator",
+    "entityRelatedConfig": [
+      {
+        "type": "Main Entity",
+        "value": "Orders"
+      },
+      {
+        "type": "Navigation Entity",
+        "value": "Items"
+      }
+    ],
+    "launchText": "To launch the generated application, run the following from the generated application root folder:\n\n```\n    npm start\n```"
+  }
+}

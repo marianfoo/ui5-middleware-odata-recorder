@@ -1,0 +1,80 @@
+{
+  "name": "ui5-middleware-odata-recorder",
+  "version": "0.0.1",
+  "description": "UI5 custom server middleware to record OData traffic for mockserver replay",
+  "main": "lib/middleware/odataRecorder.js",
+  "types": "dist/types.d.ts",
+  "files": [
+    "lib/",
+    "dist/",
+    "ui5.yaml",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "build:clean": "npm run clean:build && npm run build",
+    "watch": "tsc --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "clean:build": "rm -rf dist",
+    "clean": "rm -rf dist lib node_modules test/*/node_modules",
+    "prepublishOnly": "npm run build:clean && npm test",
+    "dev:cap": "cd test/orders && npm run watch",
+    "dev:ui5:v2": "cd test/appfev2 && ui5 serve --config ui5.record.yaml",
+    "dev:ui5:v4": "cd test/appfev4 && ui5 serve --config ui5.record.yaml",
+    "record:start": "curl -s 'http://localhost:8080/__recorder/start?tenant=100&mode=stream' | jq",
+    "record:stop": "curl -s 'http://localhost:8080/__recorder/stop' | jq",
+    "record:status": "curl -s 'http://localhost:8080/__recorder/status' | jq",
+    "release:check": "npm pack --dry-run",
+    "release:bump:patch": "npm version patch -m \"chore(release): v%s\"",
+    "release:bump:minor": "npm version minor -m \"chore(release): v%s\"",
+    "release:bump:major": "npm version major -m \"chore(release): v%s\"",
+    "release:tag:push": "git push && git push --tags"
+  },
+  "keywords": [
+    "ui5",
+    "sapui5",
+    "openui5",
+    "odata",
+    "middleware",
+    "recorder",
+    "mockserver",
+    "sap",
+    "fiori",
+    "fiori-elements",
+    "smart-templates",
+    "testing",
+    "mock-data"
+  ],
+  "author": "Marian Zeis",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marianfoo/ui5-odata-recorder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/marianfoo/ui5-odata-recorder/issues"
+  },
+  "homepage": "https://github.com/marianfoo/ui5-odata-recorder#readme",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@sap-ux/edmx-parser": "^0.9.6",
+    "@sap-ux/vocabularies-types": "^0.10.13"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.0",
+    "@types/jest": "^29.5.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "@ui5/cli": "^3.0.0"
+  }
+}

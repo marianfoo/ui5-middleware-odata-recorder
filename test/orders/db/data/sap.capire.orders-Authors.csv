@@ -1,0 +1,5 @@
+ID;createdAt;createdBy;modifiedAt;modifiedBy;name;dateOfBirth;dateOfDeath;placeOfBirth;placeOfDeath
+aaa11111-1111-1111-1111-111111111111;2024-01-01;system;2024-01-01;system;Emily Brontë;1818-07-30;1848-12-19;Thornton, England;Haworth, England
+aaa22222-2222-2222-2222-222222222222;2024-01-01;system;2024-01-01;system;Charlotte Brontë;1816-04-21;1855-03-31;Thornton, England;Haworth, England
+aaa33333-3333-3333-3333-333333333333;2024-01-01;system;2024-01-01;system;Edgar Allan Poe;1809-01-19;1849-10-07;Boston, USA;Baltimore, USA
+aaa44444-4444-4444-4444-444444444444;2024-01-01;system;2024-01-01;system;Richard Carpenter;1929-06-14;2012-02-26;London, England;Twickenham, England
