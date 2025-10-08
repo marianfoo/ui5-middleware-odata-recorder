@@ -214,6 +214,14 @@ server:
           - path: /sap              # Or /odata for CAP
             url: http://localhost:8080
 
+    # IMPORTANT: Disable auto-reload during recording to prevent infinite loops!
+    # The auto-reload middleware triggers when files are saved, causing endless reload cycles
+    # - name: fiori-tools-appreload
+    #   afterMiddleware: compression
+    #   configuration:
+    #     port: 35729
+    #     path: webapp
+
     # 2. Recorder taps responses AFTER proxy
     - name: ui5-middleware-odata-recorder
       afterMiddleware: fiori-tools-proxy  # CRITICAL: Must be after proxy!
@@ -521,12 +529,40 @@ npx ui5-odata-recorder init
 }
 ```
 
+### Issue: "Infinite reload loop / Continuous logging"
+
+**Cause:** Auto-reload middleware (`fiori-tools-appreload`) conflicts with recording.
+
+**Symptoms:**
+- Console shows endless repeated requests
+- Same OData calls logged over and over
+- App keeps reloading automatically
+- Recording never stops
+
+**Solution:**
+Remove or comment out `fiori-tools-appreload` in your `ui5.record.yaml`:
+
+```yaml
+# ❌ Remove this during recording:
+# - name: fiori-tools-appreload
+#   afterMiddleware: compression
+#   configuration:
+#     port: 35729
+#     path: webapp
+```
+
+**Why this happens:**
+1. Recorder saves files → Auto-reload detects changes → App reloads
+2. App reload triggers new OData requests → Recorder saves more files
+3. Cycle repeats infinitely
+
 ### Issue: "Middleware not recording"
 
 **Causes:**
 1. Middleware order incorrect (must be AFTER proxy)
 2. Service basePath doesn't match
 3. Recording not started
+4. Auto-reload causing infinite loops (see above)
 
 **Solutions:**
 

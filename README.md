@@ -36,6 +36,14 @@ server:
           - path: /sap
             url: https://my-backend.com
 
+    # IMPORTANT: Remove or comment out fiori-tools-appreload during recording
+    # to prevent infinite reload loops when files are saved
+    # - name: fiori-tools-appreload
+    #   afterMiddleware: compression
+    #   configuration:
+    #     port: 35729
+    #     path: webapp
+
     - name: ui5-middleware-odata-recorder
       afterMiddleware: fiori-tools-proxy  # Must be after proxy!
       configuration:
@@ -83,6 +91,8 @@ Enable `autoStart: true` to begin recording immediately when the middleware load
 ```
 
 No manual activation needed - just start your server and recording begins automatically.
+
+> **⚠️ Important**: When recording, make sure to **disable `fiori-tools-appreload`** in your `ui5.record.yaml` to prevent infinite reload loops. The auto-reload middleware triggers when files are saved, causing the app to reload and generate new requests, which saves more files, creating an endless cycle.
 
 ### Manual control via HTTP endpoints
 
