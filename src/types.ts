@@ -14,18 +14,18 @@ export type RecorderConfig = {
   controlEndpoints: boolean;
   autoSave: "onStop" | "stream";
   writeMetadata: boolean;
-  defaultTenant: string;
+  defaultTenant?: string; // optional - undefined means no tenant suffix
   autoStart: boolean;
   redact?: string[];
   services: ServiceConfig[];
 };
 
-// Middleware runtime state
-export type BufferKey = `${string}|${string}|${string}`; // alias|tenant|entitySet
+// Middleware runtime state  
+export type BufferKey = string; // alias|tenant|entitySet (tenant can be empty)
 
 export interface RecorderRuntime {
   active: boolean;
-  tenant: string;
+  tenant?: string; // undefined means no tenant suffix
   mode: "onStop" | "stream";
   buffers: Map<BufferKey, any[]>;
   entityKeys: Map<string, string[]>; // `${alias}:${entityType}` -> ["ID", ...]
@@ -34,7 +34,7 @@ export interface RecorderRuntime {
 
 export interface EntitySetInfo {
   alias: string;
-  tenant: string;
+  tenant?: string; // undefined means no tenant suffix
   entitySet: string;
   entityType?: string;
 }

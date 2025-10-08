@@ -43,7 +43,7 @@ server:
         autoSave: "stream"
         autoStart: false               # Optional: start recording immediately
         writeMetadata: true
-        defaultTenant: "100"
+        # defaultTenant: "100"         # Optional: add tenant suffix to files
         redact: ["Token", "Password"]  # Optional: fields to remove
         services:
           - alias: ODATA_HU_SRV
@@ -122,18 +122,40 @@ Add to your `package.json`:
 
 ## 📂 Output Structure
 
+### Without Tenant (defaultTenant not specified)
 ```
 webapp/localService/
-  ODATA_HU_SRV/
+  mainService/
     metadata.xml              # Auto-captured
     data/
-      HandlingUnits-100.json  # Entities for tenant 100
-      HandlingUnitItems-100.json
-  ODATA_GENERAL_SRV/
-    metadata.xml
-    data/
-      GeneralData-100.json
+      Books.json              # No tenant suffix
+      Orders.json
 ```
+
+### With Tenant (defaultTenant: "100")  
+```
+webapp/localService/
+  mainService/
+    metadata.xml              # Auto-captured
+    data/
+      Books-100.json          # Tenant suffix added
+      Orders-100.json
+```
+
+### Multi-Tenant Support
+
+The recorder supports two modes for tenant handling:
+
+**Single Tenant Mode** (default - no `defaultTenant` specified):
+- Files: `Books.json`, `Orders.json` 
+- Use when you don't need tenant isolation
+- Simpler file structure
+
+**Multi-Tenant Mode** (specify `defaultTenant` in config):
+- Files: `Books-100.json`, `Orders-100.json`
+- Use with SAP systems that have multiple clients
+- Tenant can be overridden with `?sap-client=200` in URL
+- Enables tenant-specific data isolation
 
 ## 🔧 Configuration Options
 
@@ -143,7 +165,7 @@ webapp/localService/
 | `autoSave` | `"stream"` \| `"onStop"` | `"stream"` | When to write files |
 | `autoStart` | boolean | `false` | Start recording immediately when middleware loads |
 | `writeMetadata` | boolean | `true` | Capture and write `$metadata` |
-| `defaultTenant` | string | `"100"` | Default tenant if not in request |
+| `defaultTenant` | string \| undefined | `undefined` | Default tenant for file naming (undefined = no tenant suffix) |
 | `redact` | string[] | `[]` | Field names to strip from entities |
 | `services` | ServiceConfig[] | `[]` | Services to record |
 

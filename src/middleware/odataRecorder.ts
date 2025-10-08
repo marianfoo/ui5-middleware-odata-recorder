@@ -34,7 +34,7 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
     controlEndpoints: rawConfig.controlEndpoints ?? true,
     autoSave: rawConfig.autoSave ?? 'stream',
     writeMetadata: rawConfig.writeMetadata ?? true,
-    defaultTenant: rawConfig.defaultTenant ?? '100',
+    defaultTenant: rawConfig.defaultTenant, // undefined if not specified
     autoStart: rawConfig.autoStart ?? false,
     redact: rawConfig.redact ?? [],
     services: rawConfig.services ?? []
@@ -53,7 +53,7 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
   console.log('  Control Endpoints:', config.controlEndpoints ? '✓ Enabled' : '✗ Disabled');
   console.log('  Auto Save Mode:', config.autoSave);
   console.log('  Auto Start:', config.autoStart ? '✓ Enabled' : '✗ Disabled');
-  console.log('  Default Tenant:', config.defaultTenant);
+  console.log('  Default Tenant:', config.defaultTenant || 'None (no suffix)');
   console.log('  Services:');
   config.services.forEach(s => {
     console.log(`    - ${s.alias}: ${s.basePath} (${s.version})`);
@@ -74,7 +74,8 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
 
   // If auto-start is enabled, announce it
   if (config.autoStart) {
-    console.log(`[OData Recorder] 🎬 Recording AUTO-STARTED for tenant: ${config.defaultTenant}, mode: ${config.autoSave}`);
+    const tenantMsg = config.defaultTenant ? `for tenant: ${config.defaultTenant}` : 'without tenant suffix';
+    console.log(`[OData Recorder] 🎬 Recording AUTO-STARTED ${tenantMsg}, mode: ${config.autoSave}`);
   }
 
   const parsers = new Map<string, EdmxParser>(); // alias -> parser
@@ -94,7 +95,8 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
       const tenant = extractTenant(req, config);
       debug('Auto-start triggered from query param, tenant:', tenant);
       startRecording(runtime, tenant, config.autoSave);
-      console.log(`[OData Recorder] Auto-started recording for tenant: ${tenant}`);
+      const tenantMsg = tenant ? `for tenant: ${tenant}` : 'without tenant suffix';
+      console.log(`[OData Recorder] Auto-started recording ${tenantMsg}`);
     }
 
     // If not recording, just pass through
@@ -171,13 +173,14 @@ async function handleControlEndpoint(
 /**
  * Start recording
  */
-function startRecording(runtime: RecorderRuntime, tenant: string, mode: 'onStop' | 'stream'): void {
+function startRecording(runtime: RecorderRuntime, tenant: string | undefined, mode: 'onStop' | 'stream'): void {
   debug('startRecording called:', { tenant, mode });
   runtime.active = true;
   runtime.tenant = tenant;
   runtime.mode = mode;
   runtime.buffers.clear();
-  console.log(`[OData Recorder] 🎬 Recording ACTIVE for tenant: ${tenant}, mode: ${mode}`);
+  const tenantMsg = tenant ? `for tenant: ${tenant}` : 'without tenant suffix';
+  console.log(`[OData Recorder] 🎬 Recording ACTIVE ${tenantMsg}, mode: ${mode}`);
 }
 
 /**
@@ -190,12 +193,26 @@ function findMatchingService(requestPath: string, services: ServiceConfig[]): Se
 /**
  * Extract tenant from request
  */
-function extractTenant(req: Request, config: RecorderConfig): string {
+export function extractTenant(req: Request, config: RecorderConfig): string | undefined {
   // Try sap-client query param first
   if (req.query['sap-client']) {
     return req.query['sap-client'] as string;
   }
-  return config.defaultTenant;
+  return config.defaultTenant; // undefined if not specified in config
+}
+
+/**
+ * Create entity filename with or without tenant suffix
+ */
+export function createEntityFileName(entitySet: string, tenant?: string): string {
+  return tenant ? `${entitySet}-${tenant}.json` : `${entitySet}.json`;
+}
+
+/**
+ * Create buffer key for entity storage
+ */
+export function createBufferKey(alias: string, tenant: string | undefined, entitySet: string): string {
+  return `${alias}|${tenant || ''}|${entitySet}`;
 }
 
 /**
@@ -417,8 +434,8 @@ async function processSingleResponse(
   // Redact sensitive fields
   const redacted = entities.map(e => EntityMerger.redact(e, config.redact || []));
 
-  // Buffer or write
-  const bufferKey: BufferKey = `${service.alias}|${runtime.tenant}|${entitySet}`;
+  // Buffer or write (tenant can be undefined)
+  const bufferKey: BufferKey = createBufferKey(service.alias, runtime.tenant, entitySet);
   
   if (runtime.mode === 'stream') {
     // Immediately write to file
@@ -430,7 +447,7 @@ async function processSingleResponse(
     runtime.buffers.set(bufferKey, merged);
   }
 
-  console.log(`[OData Recorder] Captured ${entities.length} entities for ${entitySet} (tenant: ${runtime.tenant})`);
+  console.log(`[OData Recorder] Captured ${entities.length} entities for ${entitySet}${runtime.tenant ? ` (tenant: ${runtime.tenant})` : ''}`);
 }
 
 /**
@@ -555,12 +572,14 @@ async function writeMetadata(alias: string, xml: string, config: RecorderConfig)
 async function writeEntities(
   service: ServiceConfig,
   entitySet: string,
-  tenant: string,
+  tenant: string | undefined,
   entities: any[],
   keys: string[],
   parsers: Map<string, EdmxParser>
 ): Promise<void> {
-  const filePath = path.join(service.targetDir, `${entitySet}-${tenant}.json`);
+  // Create filename: with tenant suffix only if tenant is specified
+  const fileName = createEntityFileName(entitySet, tenant);
+  const filePath = path.join(service.targetDir, fileName);
   await ensureDir(service.targetDir);
 
   // Read existing file if present and merge
@@ -579,13 +598,13 @@ async function writeEntities(
   
   // Check if content is identical to avoid unnecessary writes (prevents auto-reload loops)
   if (await isFileContentIdentical(filePath, newContent)) {
-    debug(`[TRACE] Skipping entity write - content unchanged: ${entitySet}-${tenant}.json`);
+    debug(`[TRACE] Skipping entity write - content unchanged: ${fileName}`);
     return;
   }
   
   // Content is different, write the file
   await fs.promises.writeFile(filePath, newContent, 'utf-8');
-  console.log(`[OData Recorder] 📝 Updated entities: ${entitySet}-${tenant}.json (${merged.length} entities)`);
+  console.log(`[OData Recorder] 📝 Updated entities: ${fileName} (${merged.length} entities)`);
 }
 
 /**
@@ -602,14 +621,15 @@ async function flushAllBuffers(
   console.log(`[OData Recorder] Flushing ${runtime.buffers.size} buffered entity sets...`);
 
   for (const [bufferKey, entities] of runtime.buffers.entries()) {
-    const [alias, tenant, entitySet] = bufferKey.split('|');
+    const [alias, tenantStr, entitySet] = bufferKey.split('|');
+    const tenant = tenantStr || undefined; // convert empty string back to undefined
     const service = config.services.find(s => s.alias === alias);
     
     if (service) {
       const parser = parsers.get(alias);
       const keys = parser?.getKeysForEntitySet(entitySet) || [];
       
-      console.log(`[OData Recorder] Processing ${entities.length} entities for ${entitySet} (tenant: ${tenant})`);
+      console.log(`[OData Recorder] Processing ${entities.length} entities for ${entitySet}${tenant ? ` (tenant: ${tenant})` : ''}`);
       
       const writePromise = writeEntities(service, entitySet, tenant, entities, keys, parsers)
         .catch(err => {
