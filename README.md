@@ -12,6 +12,7 @@ UI5 custom server middleware to record OData traffic and write FE-mockserver-com
 - **Multi-tenant**: Isolate recordings by tenant/client ID
 - **Control endpoints**: REST API to start/stop/status/flush recording
 - **Stream or batch**: Write immediately or buffer until stop
+- **Smart duplicate detection**: Only writes files when content actually changes
 
 ## 📦 Installation
 

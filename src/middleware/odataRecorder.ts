@@ -434,6 +434,23 @@ async function processSingleResponse(
 }
 
 /**
+ * Check if file content is identical to new content (prevents unnecessary writes)
+ */
+async function isFileContentIdentical(filePath: string, newContent: string): Promise<boolean> {
+  try {
+    if (!fs.existsSync(filePath)) {
+      return false; // File doesn't exist, content is different
+    }
+    
+    const existingContent = await fs.promises.readFile(filePath, 'utf-8');
+    return existingContent === newContent;
+  } catch (e) {
+    debug(`[TRACE] Error checking file content for ${filePath}:`, e);
+    return false; // On error, assume content is different
+  }
+}
+
+/**
  * Write metadata to file
  */
 // Track fresh fetch attempts to prevent infinite loops
@@ -508,7 +525,7 @@ async function fetchFreshMetadata(
 }
 
 /**
- * Write metadata.xml file (always overwrites to ensure fresh metadata)
+ * Write metadata.xml file (only if content changed)
  */
 async function writeMetadata(alias: string, xml: string, config: RecorderConfig): Promise<void> {
   const service = config.services.find(s => s.alias === alias);
@@ -520,14 +537,20 @@ async function writeMetadata(alias: string, xml: string, config: RecorderConfig)
   
   await ensureDir(path.dirname(metadataPath));
   
-  // Always overwrite to ensure latest metadata
-  await fs.promises.writeFile(metadataPath, xml, 'utf-8');
+  // Check if content is identical to avoid unnecessary writes (prevents auto-reload loops)
+  if (await isFileContentIdentical(metadataPath, xml)) {
+    debug(`[TRACE] Skipping metadata write - content unchanged: ${metadataPath}`);
+    return;
+  }
   
+  // Content is different, write the file
+  await fs.promises.writeFile(metadataPath, xml, 'utf-8');
+  console.log(`[OData Recorder] 📝 Updated metadata: ${alias}/metadata.xml`);
   debug(`[TRACE] Metadata file written: ${metadataPath} (${xml.length} bytes)`);
 }
 
 /**
- * Write entities to file
+ * Write entities to file (only if content changed)
  */
 async function writeEntities(
   service: ServiceConfig,
@@ -552,7 +575,17 @@ async function writeEntities(
   }
 
   const merged = EntityMerger.merge(existing, entities, keys);
-  await fs.promises.writeFile(filePath, JSON.stringify(merged, null, 2), 'utf-8');
+  const newContent = JSON.stringify(merged, null, 2);
+  
+  // Check if content is identical to avoid unnecessary writes (prevents auto-reload loops)
+  if (await isFileContentIdentical(filePath, newContent)) {
+    debug(`[TRACE] Skipping entity write - content unchanged: ${entitySet}-${tenant}.json`);
+    return;
+  }
+  
+  // Content is different, write the file
+  await fs.promises.writeFile(filePath, newContent, 'utf-8');
+  console.log(`[OData Recorder] 📝 Updated entities: ${entitySet}-${tenant}.json (${merged.length} entities)`);
 }
 
 /**
@@ -576,14 +609,11 @@ async function flushAllBuffers(
       const parser = parsers.get(alias);
       const keys = parser?.getKeysForEntitySet(entitySet) || [];
       
-      console.log(`[OData Recorder] Writing ${entities.length} entities for ${entitySet} (tenant: ${tenant})`);
+      console.log(`[OData Recorder] Processing ${entities.length} entities for ${entitySet} (tenant: ${tenant})`);
       
       const writePromise = writeEntities(service, entitySet, tenant, entities, keys, parsers)
-        .then(() => {
-          console.log(`[OData Recorder] ✓ Successfully wrote ${entitySet}-${tenant}.json`);
-        })
         .catch(err => {
-          console.error(`[OData Recorder] ✗ Error writing ${bufferKey}:`, err);
+          console.error(`[OData Recorder] ✗ Error processing ${bufferKey}:`, err);
         });
       
       writes.push(writePromise);
