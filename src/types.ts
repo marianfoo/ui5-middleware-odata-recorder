@@ -15,6 +15,7 @@ export type RecorderConfig = {
   autoSave: "onStop" | "stream";
   writeMetadata: boolean;
   defaultTenant: string;
+  autoStart: boolean;
   redact?: string[];
   services: ServiceConfig[];
 };

@@ -40,6 +40,7 @@ server:
       configuration:
         controlEndpoints: true
         autoSave: "stream"
+        autoStart: false               # Optional: start recording immediately
         writeMetadata: true
         defaultTenant: "100"
         redact: ["Token", "Password"]  # Optional: fields to remove
@@ -65,6 +66,22 @@ http://localhost:8080/index.html?__record=1&sap-client=100
 ```
 
 The middleware will automatically start recording for tenant `100`.
+
+### Auto-start with configuration
+
+Enable `autoStart: true` to begin recording immediately when the middleware loads:
+
+```yaml
+- name: ui5-middleware-odata-recorder
+  afterMiddleware: fiori-tools-proxy
+  configuration:
+    autoStart: true              # Start recording immediately
+    autoSave: "stream"          # Write files as requests come in
+    defaultTenant: "100"        # Record for tenant 100
+    services: [...]
+```
+
+No manual activation needed - just start your server and recording begins automatically.
 
 ### Manual control via HTTP endpoints
 
@@ -123,6 +140,7 @@ webapp/localService/
 |--------|------|---------|-------------|
 | `controlEndpoints` | boolean | `true` | Enable `/__recorder/*` endpoints |
 | `autoSave` | `"stream"` \| `"onStop"` | `"stream"` | When to write files |
+| `autoStart` | boolean | `false` | Start recording immediately when middleware loads |
 | `writeMetadata` | boolean | `true` | Capture and write `$metadata` |
 | `defaultTenant` | string | `"100"` | Default tenant if not in request |
 | `redact` | string[] | `[]` | Field names to strip from entities |

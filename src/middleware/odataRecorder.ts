@@ -35,6 +35,7 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
     autoSave: rawConfig.autoSave ?? 'stream',
     writeMetadata: rawConfig.writeMetadata ?? true,
     defaultTenant: rawConfig.defaultTenant ?? '100',
+    autoStart: rawConfig.autoStart ?? false,
     redact: rawConfig.redact ?? [],
     services: rawConfig.services ?? []
   };
@@ -51,6 +52,7 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
   console.log('='.repeat(60));
   console.log('  Control Endpoints:', config.controlEndpoints ? '✓ Enabled' : '✗ Disabled');
   console.log('  Auto Save Mode:', config.autoSave);
+  console.log('  Auto Start:', config.autoStart ? '✓ Enabled' : '✗ Disabled');
   console.log('  Default Tenant:', config.defaultTenant);
   console.log('  Services:');
   config.services.forEach(s => {
@@ -62,13 +64,18 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
   debug('Full config:', config);
 
   const runtime: RecorderRuntime = {
-    active: false,
+    active: config.autoStart, // Start recording immediately if autoStart is enabled
     tenant: config.defaultTenant,
     mode: config.autoSave,
     buffers: new Map(),
     entityKeys: new Map(),
     metadataCache: new Map()
   };
+
+  // If auto-start is enabled, announce it
+  if (config.autoStart) {
+    console.log(`[OData Recorder] 🎬 Recording AUTO-STARTED for tenant: ${config.defaultTenant}, mode: ${config.autoSave}`);
+  }
 
   const parsers = new Map<string, EdmxParser>(); // alias -> parser
 
