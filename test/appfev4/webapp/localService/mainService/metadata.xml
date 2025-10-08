@@ -73,7 +73,6 @@
         <Property Name="HasDraftEntity" Type="Edm.Boolean" Nullable="false" DefaultValue="false"/>
         <NavigationProperty Name="DraftAdministrativeData" Type="sap.capire.orders.api.OrdersService.DraftAdministrativeData" ContainsTarget="true"/>
         <NavigationProperty Name="SiblingEntity" Type="sap.capire.orders.api.OrdersService.Orders"/>
-        <Property Name="DraftMessages" Type="Collection(sap.capire.orders.api.OrdersService.DRAFT_DraftAdministrativeData_DraftMessage)" Nullable="true"/>
       </EntityType>
       <EntityType Name="Customers">
         <Key>
@@ -160,7 +159,6 @@
         <Property Name="HasDraftEntity" Type="Edm.Boolean" Nullable="false" DefaultValue="false"/>
         <NavigationProperty Name="DraftAdministrativeData" Type="sap.capire.orders.api.OrdersService.DraftAdministrativeData" ContainsTarget="true"/>
         <NavigationProperty Name="SiblingEntity" Type="sap.capire.orders.api.OrdersService.Orders_Items"/>
-        <Property Name="DraftMessages" Type="Collection(sap.capire.orders.api.OrdersService.DRAFT_DraftAdministrativeData_DraftMessage)" Nullable="true"/>
       </EntityType>
       <EntityType Name="OrdersNoDraft_Items">
         <Key>
@@ -187,15 +185,6 @@
         <Property Name="descr" Type="Edm.String" MaxLength="1000"/>
         <Property Name="code" Type="Edm.String" MaxLength="3" Nullable="false"/>
       </EntityType>
-      <ComplexType Name="DRAFT_DraftAdministrativeData_DraftMessage">
-        <Property Name="code" Type="Edm.String"/>
-        <Property Name="message" Type="Edm.String"/>
-        <Property Name="target" Type="Edm.String"/>
-        <Property Name="additionalTargets" Type="Collection(Edm.String)" Nullable="true"/>
-        <Property Name="transition" Type="Edm.Boolean"/>
-        <Property Name="numericSeverity" Type="Edm.Byte"/>
-        <Property Name="longtextUrl" Type="Edm.String"/>
-      </ComplexType>
       <Action Name="draftPrepare" IsBound="true" EntitySetPath="in">
         <Parameter Name="in" Type="sap.capire.orders.api.OrdersService.Orders"/>
         <Parameter Name="SideEffectsQualifier" Type="Edm.String"/>
@@ -215,9 +204,6 @@
         <Parameter Name="PreserveChanges" Type="Edm.Boolean"/>
         <ReturnType Type="sap.capire.orders.api.OrdersService.Orders"/>
       </Action>
-      <Annotations Target="sap.capire.orders.api.OrdersService.EntityContainer">
-        <Annotation Term="Common.AddressViaNavigationPath" Bool="true"/>
-      </Annotations>
       <Annotations Target="sap.capire.orders.api.OrdersService.Orders">
         <Annotation Term="UI.SelectionFields">
           <Collection>
@@ -345,23 +331,6 @@
             </PropertyValue>
           </Record>
         </Annotation>
-        <Annotation Term="Common.SideEffects" Qualifier="alwaysFetchMessages">
-          <Record Type="Common.SideEffectsType">
-            <PropertyValue Property="SourceEntities">
-              <Collection>
-                <NavigationPropertyPath></NavigationPropertyPath>
-              </Collection>
-            </PropertyValue>
-            <PropertyValue Property="TargetProperties">
-              <Collection>
-                <String>DraftMessages</String>
-              </Collection>
-            </PropertyValue>
-          </Record>
-        </Annotation>
-        <Annotation Term="Common.Messages">
-          <Path>DraftMessages</Path>
-        </Annotation>
       </Annotations>
       <Annotations Target="sap.capire.orders.api.OrdersService.EntityContainer/Orders">
         <Annotation Term="Common.DraftRoot">
@@ -369,20 +338,6 @@
             <PropertyValue Property="ActivationAction" String="sap.capire.orders.api.OrdersService.draftActivate"/>
             <PropertyValue Property="EditAction" String="sap.capire.orders.api.OrdersService.draftEdit"/>
             <PropertyValue Property="PreparationAction" String="sap.capire.orders.api.OrdersService.draftPrepare"/>
-          </Record>
-        </Annotation>
-        <Annotation Term="Common.SideEffects" Qualifier="alwaysFetchMessages">
-          <Record Type="Common.SideEffectsType">
-            <PropertyValue Property="SourceEntities">
-              <Collection>
-                <NavigationPropertyPath></NavigationPropertyPath>
-              </Collection>
-            </PropertyValue>
-            <PropertyValue Property="TargetProperties">
-              <Collection>
-                <String>DraftMessages</String>
-              </Collection>
-            </PropertyValue>
           </Record>
         </Annotation>
       </Annotations>
@@ -486,9 +441,6 @@
       </Annotations>
       <Annotations Target="sap.capire.orders.api.OrdersService.Orders/DraftAdministrativeData">
         <Annotation Term="UI.Hidden" Bool="true"/>
-      </Annotations>
-      <Annotations Target="sap.capire.orders.api.OrdersService.Orders/DraftMessages">
-        <Annotation Term="Core.Computed" Bool="true"/>
       </Annotations>
       <Annotations Target="sap.capire.orders.api.OrdersService.Customers/ID">
         <Annotation Term="Core.ComputedDefaultValue" Bool="true"/>
@@ -669,42 +621,11 @@
             </Record>
           </Collection>
         </Annotation>
-        <Annotation Term="Common.SideEffects" Qualifier="alwaysFetchMessages">
-          <Record Type="Common.SideEffectsType">
-            <PropertyValue Property="SourceEntities">
-              <Collection>
-                <NavigationPropertyPath></NavigationPropertyPath>
-              </Collection>
-            </PropertyValue>
-            <PropertyValue Property="TargetProperties">
-              <Collection>
-                <String>DraftMessages</String>
-              </Collection>
-            </PropertyValue>
-          </Record>
-        </Annotation>
-        <Annotation Term="Common.Messages">
-          <Path>DraftMessages</Path>
-        </Annotation>
       </Annotations>
       <Annotations Target="sap.capire.orders.api.OrdersService.EntityContainer/Orders_Items">
         <Annotation Term="Common.DraftNode">
           <Record Type="Common.DraftNodeType">
             <PropertyValue Property="PreparationAction" String="sap.capire.orders.api.OrdersService.draftPrepare"/>
-          </Record>
-        </Annotation>
-        <Annotation Term="Common.SideEffects" Qualifier="alwaysFetchMessages">
-          <Record Type="Common.SideEffectsType">
-            <PropertyValue Property="SourceEntities">
-              <Collection>
-                <NavigationPropertyPath></NavigationPropertyPath>
-              </Collection>
-            </PropertyValue>
-            <PropertyValue Property="TargetProperties">
-              <Collection>
-                <String>DraftMessages</String>
-              </Collection>
-            </PropertyValue>
           </Record>
         </Annotation>
       </Annotations>
@@ -732,9 +653,6 @@
       </Annotations>
       <Annotations Target="sap.capire.orders.api.OrdersService.Orders_Items/DraftAdministrativeData">
         <Annotation Term="UI.Hidden" Bool="true"/>
-      </Annotations>
-      <Annotations Target="sap.capire.orders.api.OrdersService.Orders_Items/DraftMessages">
-        <Annotation Term="Core.Computed" Bool="true"/>
       </Annotations>
       <Annotations Target="sap.capire.orders.api.OrdersService.OrdersNoDraft_Items/ID">
         <Annotation Term="Core.ComputedDefaultValue" Bool="true"/>

@@ -229,7 +229,8 @@ server:
         controlEndpoints: true
         autoSave: "onStop"          # or "stream" for immediate writes
         writeMetadata: true
-        defaultTenant: "001"
+        defaultTenant: "001"         # Fixed tenant, or use "getTenantFromSAPClient" for URL-only
+        # removeSelectParams: false  # Optional: disable $select removal (default: true)
         redact:                     # Optional: strip sensitive fields
           - Password
           - Token
@@ -247,7 +248,8 @@ server:
 | `controlEndpoints` | `true`/`false` | Enable `/__recorder/*` REST API |
 | `autoSave` | `"onStop"` or `"stream"` | Batch mode (save on stop) vs streaming |
 | `writeMetadata` | `true`/`false` | Capture and write `$metadata` |
-| `defaultTenant` | string | Tenant ID when not in URL |
+| `defaultTenant` | string \| `"getTenantFromSAPClient"` | Tenant mode: fixed ID, URL-only, or none |
+| `removeSelectParams` | `true`/`false` | Remove $select to capture full entities (default: `true`) |
 | `redact` | string[] | Field names to remove from entities |
 
 #### `ui5.mock.yaml` - Replay Mode
@@ -404,7 +406,84 @@ npx ui5-odata-recorder record \
 - Memory-constrained environments
 - Long-running recordings
 
-### Scenario 3: Custom Middleware Configuration
+### Scenario 3: Full Entity Capture (Default Behavior)
+
+By default, the recorder captures complete entity data instead of just UI-selected fields:
+
+**ui5.record.yaml:**
+```yaml
+- name: ui5-middleware-odata-recorder
+  afterMiddleware: fiori-tools-proxy
+  configuration:
+    # removeSelectParams: true  # This is the default behavior
+    autoSave: "stream"
+    services:
+      - alias: BooksService
+        version: v4
+        basePath: /odata/v4/books/
+        targetDir: webapp/localService/BooksService/data
+```
+
+**What happens by default:**
+- Request: `GET /Books?$select=ID,title&$top=10`
+- Modified: `GET /Books?$top=10` (no $select)
+- Response includes ALL entity fields, not just ID and title
+
+**Benefits (enabled by default):**
+- Foreign keys like `book_ID` are preserved
+- Complete data for comprehensive testing
+- UI changes won't break your mock data
+
+**To preserve UI's original $select behavior:**
+```yaml
+removeSelectParams: false  # Capture only fields selected by UI
+```
+
+**When full entity capture is most valuable:**
+- Building test datasets for QA
+- Creating comprehensive mock data
+- When UI only shows subset of available fields
+- For relationship testing (navigation properties)
+
+### Scenario 4: Dynamic Tenant Detection
+
+To record different tenants based only on URL parameters:
+
+**ui5.record.yaml:**
+```yaml
+- name: ui5-middleware-odata-recorder
+  afterMiddleware: fiori-tools-proxy
+  configuration:
+    defaultTenant: "getTenantFromSAPClient"  # Special value for URL-only mode
+    autoSave: "stream"
+    services:
+      - alias: MainService
+        version: v4
+        basePath: /odata/v4/main/
+        targetDir: webapp/localService/MainService/data
+```
+
+**How it works:**
+- URL: `http://localhost:8080/index.html?sap-client=100`
+  - Records to: `Books-100.json`, `Orders-100.json` 
+- URL: `http://localhost:8080/index.html?sap-client=200`
+  - Records to: `Books-200.json`, `Orders-200.json`
+- URL: `http://localhost:8080/index.html` (no sap-client)
+  - Records to: `Books.json`, `Orders.json` (no tenant suffix)
+
+**Benefits:**
+- No configuration needed for different tenants
+- Automatic tenant detection from SAP client parameter
+- Clean files when no tenant is specified
+- Perfect for SAP systems with client-dependent data
+
+**When to use:**
+- Recording from multiple SAP clients dynamically
+- Testing different client configurations
+- When tenant should never be hardcoded in configuration
+- For development environments with changing clients
+
+### Scenario 5: Custom Middleware Configuration
 
 For advanced control, manually configure the middleware:
 

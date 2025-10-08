@@ -41,9 +41,10 @@ server:
       beforeMiddleware: fiori-tools-proxy
       configuration:
         controlEndpoints: true        # default: true - Enable /__recorder/* HTTP endpoints
-        autoSave: "stream"            # default: "stream" - Options: "stream" | "onStop"
+        autoSave: "stream"    # default: "stream" - Options: "stream" | "onStop"
+        autoStart: true
         writeMetadata: true           # default: true - Capture and write $metadata
-        defaultTenant: "100"          # default: "100" - Default tenant if not in request
+        # defaultTenant: "100"          # default: "100" - Default tenant if not in request
         debug: true                   # default: false - Enable debug logging
         redact: []                    # default: [] - Field names to remove from entities (e.g. ["Token", "Password"])
         services:

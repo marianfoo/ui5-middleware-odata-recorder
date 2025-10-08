@@ -85,6 +85,115 @@ describe('Tenant Functionality', () => {
       
       expect(result).toBe('300');
     });
+
+    describe('getTenantFromSAPClient special behavior', () => {
+      it('should return tenant from sap-client when defaultTenant is "getTenantFromSAPClient"', () => {
+        const config: RecorderConfig = {
+          controlEndpoints: true,
+          autoSave: 'stream',
+          writeMetadata: true,
+          defaultTenant: 'getTenantFromSAPClient',
+          autoStart: false,
+          services: []
+        };
+
+        mockRequest.query = { 'sap-client': '100' };
+        const result = extractTenant(mockRequest as Request, config);
+
+        expect(result).toBe('100');
+      });
+
+      it('should return undefined when no sap-client and defaultTenant is "getTenantFromSAPClient"', () => {
+        const config: RecorderConfig = {
+          controlEndpoints: true,
+          autoSave: 'stream',
+          writeMetadata: true,
+          defaultTenant: 'getTenantFromSAPClient',
+          autoStart: false,
+          services: []
+        };
+
+        mockRequest.query = {};
+        const result = extractTenant(mockRequest as Request, config);
+
+        expect(result).toBeUndefined();
+      });
+
+      it('should return undefined when sap-client is empty string and defaultTenant is "getTenantFromSAPClient"', () => {
+        const config: RecorderConfig = {
+          controlEndpoints: true,
+          autoSave: 'stream',
+          writeMetadata: true,
+          defaultTenant: 'getTenantFromSAPClient',
+          autoStart: false,
+          services: []
+        };
+
+        mockRequest.query = { 'sap-client': '' };
+        const result = extractTenant(mockRequest as Request, config);
+
+        expect(result).toBeUndefined();
+      });
+
+      it('should return undefined when sap-client is whitespace and defaultTenant is "getTenantFromSAPClient"', () => {
+        const config: RecorderConfig = {
+          controlEndpoints: true,
+          autoSave: 'stream',
+          writeMetadata: true,
+          defaultTenant: 'getTenantFromSAPClient',
+          autoStart: false,
+          services: []
+        };
+
+        mockRequest.query = { 'sap-client': '   ' };
+        const result = extractTenant(mockRequest as Request, config);
+
+        expect(result).toBeUndefined();
+      });
+
+      it('should handle various tenant values from sap-client when defaultTenant is "getTenantFromSAPClient"', () => {
+        const config: RecorderConfig = {
+          controlEndpoints: true,
+          autoSave: 'stream', 
+          writeMetadata: true,
+          defaultTenant: 'getTenantFromSAPClient',
+          autoStart: false,
+          services: []
+        };
+
+        const testCases = [
+          { input: '100', expected: '100' },
+          { input: '001', expected: '001' },
+          { input: 'DEV', expected: 'DEV' },
+          { input: 'PROD-001', expected: 'PROD-001' },
+          { input: '0', expected: '0' }
+        ];
+
+        testCases.forEach(({ input, expected }) => {
+          mockRequest.query = { 'sap-client': input };
+          const result = extractTenant(mockRequest as Request, config);
+          expect(result).toBe(expected);
+        });
+      });
+
+      it('should NOT fall back to other defaultTenant values when "getTenantFromSAPClient" is used', () => {
+        // This test ensures the special behavior doesn't accidentally use other values
+        const config: RecorderConfig = {
+          controlEndpoints: true,
+          autoSave: 'stream',
+          writeMetadata: true,
+          defaultTenant: 'getTenantFromSAPClient', // Special value, not a real tenant
+          autoStart: false,
+          services: []
+        };
+
+        mockRequest.query = {}; // No sap-client parameter
+        const result = extractTenant(mockRequest as Request, config);
+
+        // Should be undefined, NOT "getTenantFromSAPClient"
+        expect(result).toBeUndefined();
+      });
+    });
   });
 
   describe('File naming', () => {
@@ -194,6 +303,26 @@ describe('Tenant Functionality', () => {
       expect(config.autoStart).toBe(false);
       expect(config.services).toHaveLength(1);
     });
+
+    it('should accept config with defaultTenant set to "getTenantFromSAPClient"', () => {
+      const config: RecorderConfig = {
+        controlEndpoints: true,
+        autoSave: 'stream',
+        writeMetadata: true,
+        defaultTenant: 'getTenantFromSAPClient',
+        autoStart: true,
+        services: [{
+          alias: 'mainService',
+          version: 'v4',
+          basePath: '/odata/v4/',
+          targetDir: 'webapp/localService/mainService/data'
+        }]
+      };
+
+      expect(config.defaultTenant).toBe('getTenantFromSAPClient');
+      expect(config.autoStart).toBe(true);
+      expect(config.services).toHaveLength(1);
+    });
   });
 
   describe('Logging messages', () => {
@@ -244,6 +373,24 @@ describe('Tenant Functionality', () => {
       const message = `Recording AUTO-STARTED ${tenantMsg}, mode: ${autoSave}`;
       
       expect(message).toBe('Recording AUTO-STARTED for tenant: 100, mode: onStop');
+    });
+
+    it('should format auto-start message with getTenantFromSAPClient', () => {
+      const defaultTenant = 'getTenantFromSAPClient';
+      const autoSave = 'stream';
+      
+      let tenantMsg: string;
+      if (defaultTenant === 'getTenantFromSAPClient') {
+        tenantMsg = 'with tenant from sap-client URL parameter';
+      } else if (defaultTenant) {
+        tenantMsg = `for tenant: ${defaultTenant}`;
+      } else {
+        tenantMsg = 'without tenant suffix';
+      }
+      
+      const message = `Recording AUTO-STARTED ${tenantMsg}, mode: ${autoSave}`;
+      
+      expect(message).toBe('Recording AUTO-STARTED with tenant from sap-client URL parameter, mode: stream');
     });
   });
 

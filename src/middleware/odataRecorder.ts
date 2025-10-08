@@ -10,6 +10,7 @@ import { RecorderConfig, RecorderRuntime, BufferKey, ServiceConfig, ODataRespons
 import { EdmxParser } from '../utils/edmxParser';
 import { ODataParser } from '../utils/odataParser';
 import { EntityMerger } from '../utils/entityMerger';
+import { removeSelectFromRequest } from '../utils/urlUtils';
 
 // Global debug from environment OR config
 let DEBUG = process.env.DEBUG === '1' || process.env.DEBUG === 'true';
@@ -36,6 +37,7 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
     writeMetadata: rawConfig.writeMetadata ?? true,
     defaultTenant: rawConfig.defaultTenant, // undefined if not specified
     autoStart: rawConfig.autoStart ?? false,
+    removeSelectParams: rawConfig.removeSelectParams ?? true,
     redact: rawConfig.redact ?? [],
     services: rawConfig.services ?? []
   };
@@ -53,7 +55,11 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
   console.log('  Control Endpoints:', config.controlEndpoints ? '✓ Enabled' : '✗ Disabled');
   console.log('  Auto Save Mode:', config.autoSave);
   console.log('  Auto Start:', config.autoStart ? '✓ Enabled' : '✗ Disabled');
-  console.log('  Default Tenant:', config.defaultTenant || 'None (no suffix)');
+  console.log('  Remove $select:', config.removeSelectParams ? '✓ Enabled (full entities)' : '✗ Disabled');
+  console.log('  Default Tenant:', 
+    config.defaultTenant === 'getTenantFromSAPClient' 
+      ? 'From sap-client URL parameter' 
+      : config.defaultTenant || 'None (no suffix)');
   console.log('  Services:');
   config.services.forEach(s => {
     console.log(`    - ${s.alias}: ${s.basePath} (${s.version})`);
@@ -74,7 +80,14 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
 
   // If auto-start is enabled, announce it
   if (config.autoStart) {
-    const tenantMsg = config.defaultTenant ? `for tenant: ${config.defaultTenant}` : 'without tenant suffix';
+    let tenantMsg: string;
+    if (config.defaultTenant === 'getTenantFromSAPClient') {
+      tenantMsg = 'with tenant from sap-client URL parameter';
+    } else if (config.defaultTenant) {
+      tenantMsg = `for tenant: ${config.defaultTenant}`;
+    } else {
+      tenantMsg = 'without tenant suffix';
+    }
     console.log(`[OData Recorder] 🎬 Recording AUTO-STARTED ${tenantMsg}, mode: ${config.autoSave}`);
   }
 
@@ -118,6 +131,46 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
     console.log(`[OData Recorder] ✓ Intercepting ${req.method} ${req.path} for service ${service.alias}`);
     debug('[TRACE] Setting up response tap...');
     debug('Request details:', { method: req.method, path: req.path, query: req.query, contentType: req.headers['content-type'] });
+
+    // Modify request to remove $select parameters if configured
+    if (config.removeSelectParams) {
+      const originalUrl = req.url;
+      const contentType = req.headers['content-type'] as string;
+      let body: string | undefined;
+      
+      // For batch requests, we need to modify the body
+      if (req.body && typeof req.body === 'string') {
+        body = req.body;
+      } else if (req.body && Buffer.isBuffer(req.body)) {
+        body = req.body.toString('utf-8');
+      }
+      
+      const modified = removeSelectFromRequest(req.url, body, contentType);
+      
+      if (modified.url !== originalUrl || modified.body !== body) {
+        debug(`[TRACE] Modified request - Original: ${originalUrl}`);
+        debug(`[TRACE] Modified request - New: ${modified.url}`);
+        
+        // Update the request URL - Express will automatically update req.path
+        req.url = modified.url;
+        
+        // Parse new query parameters
+        const urlObj = new URL(modified.url, 'http://localhost');
+        const newQuery: any = {};
+        for (const [key, value] of urlObj.searchParams.entries()) {
+          newQuery[key] = value;
+        }
+        req.query = newQuery;
+        
+        // Update body if it was modified (for batch requests)
+        if (modified.body !== body) {
+          req.body = modified.body;
+          debug(`[TRACE] Modified batch body (${body?.length || 0} -> ${modified.body?.length || 0} chars)`);
+        }
+        
+        console.log(`[OData Recorder] 🔧 Removed $select parameters from request to get full entities`);
+      }
+    }
 
     // Tap the response
     tapResponse(req, res, next, service, runtime, config, parsers);
@@ -194,7 +247,14 @@ function findMatchingService(requestPath: string, services: ServiceConfig[]): Se
  * Extract tenant from request
  */
 export function extractTenant(req: Request, config: RecorderConfig): string | undefined {
-  // Try sap-client query param first
+  // Special case: if defaultTenant is "getTenantFromSAPClient", only use URL parameter
+  if (config.defaultTenant === 'getTenantFromSAPClient') {
+    const sapClient = req.query['sap-client'] as string;
+    // Return undefined if sap-client is missing or empty (no tenant suffix)
+    return sapClient && sapClient.trim() !== '' ? sapClient : undefined;
+  }
+  
+  // Standard behavior: try sap-client query param first, then fall back to default
   if (req.query['sap-client']) {
     return req.query['sap-client'] as string;
   }

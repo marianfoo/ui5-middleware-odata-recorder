@@ -16,6 +16,7 @@ export type RecorderConfig = {
   writeMetadata: boolean;
   defaultTenant?: string; // optional - undefined means no tenant suffix
   autoStart: boolean;
+  removeSelectParams?: boolean; // optional - remove $select from requests to get full entities
   redact?: string[];
   services: ServiceConfig[];
 };
