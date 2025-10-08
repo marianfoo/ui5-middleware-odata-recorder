@@ -1,6 +1,6 @@
 {
   "name": "ui5-middleware-odata-recorder",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "UI5 custom server middleware to record OData traffic for mockserver replay",
   "main": "lib/middleware/odataRecorder.js",
   "types": "dist/types.d.ts",
