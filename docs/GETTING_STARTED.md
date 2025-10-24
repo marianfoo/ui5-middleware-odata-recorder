@@ -114,18 +114,15 @@ This means your UI5 app doesn't know it's talking to a mock - the behavior is id
 - **Git** (for development)
 - A UI5 application with `webapp/manifest.json`
 
-### Option 1: Install from npm (Production)
+### Install from npm
 
 ```bash
-# Install CLI globally
-npm install -g ui5-odata-recorder
-
 # Install middleware in your UI5 project
 cd /path/to/your/ui5-app
 npm install --save-dev ui5-middleware-odata-recorder
 ```
 
-### Option 2: Build from Source (Development)
+### Build from Source (Development)
 
 ```bash
 # Clone repository
@@ -137,9 +134,6 @@ npm install
 
 # Build the middleware
 npm run build
-
-# Link package globally for development (optional)
-npm link
 ```
 
 ---
@@ -224,7 +218,7 @@ server:
 
     # 2. Recorder taps responses AFTER proxy
     - name: ui5-middleware-odata-recorder
-      afterMiddleware: fiori-tools-proxy  # CRITICAL: Must be after proxy!
+      beforeMiddleware: fiori-tools-proxy  # CRITICAL: Must be after proxy!
       configuration:
         controlEndpoints: true
         autoSave: "onStop"          # or "stream" for immediate writes
@@ -288,31 +282,21 @@ server:
 # 1. Navigate to your app
 cd /path/to/your/ui5-app
 
-# 2. Initialize recorder
-npx ui5-odata-recorder init \
-  --backend-url https://your-sap-system.com \
-  --tenant 100
+# 2. Configure ui5.yaml with middleware (see Configuration Guide below)
 
 # 3. Start recording mode
-ui5 serve --config ui5.record.yaml
+ui5 serve
 
-# 4. In another terminal, control recording
-npx ui5-odata-recorder record \
-  --tenant 100 \
-  --app-url "http://localhost:8080/index.html?sap-ui-xx-viewCache=false" \
-  --server-url "http://localhost:8080" \
-  --open
+# 4. Open in browser with recording enabled
+# http://localhost:8080/index.html?__record=1&sap-client=100
 
-# 5. Click through your app, then Ctrl+C
+# 5. Click through your app, then stop the server (Ctrl+C)
 
-# 6. Start replay mode
+# 6. Start replay mode with mockserver configuration
 ui5 serve --config ui5.mock.yaml
 
-# 7. Open in browser
-npx ui5-odata-recorder replay \
-  --tenant 100 \
-  --app-url "http://localhost:8080/index.html" \
-  --open
+# 7. Open in browser for replay
+# http://localhost:8080/index.html?sap-client=100
 ```
 
 ### Workflow 2: CAP Application
@@ -323,27 +307,19 @@ npx ui5-odata-recorder replay \
 # 1. Navigate to your Fiori app
 cd /path/to/cap-project/app/yourapp
 
-# 2. Initialize recorder
-npx ui5-odata-recorder init
-
-# 3. Add middleware to ui5.yaml
+# 2. Add middleware to ui5.yaml
 # Edit ui5.yaml and add ui5-middleware-odata-recorder after fiori-tools-proxy
 
-# 4. Start CAP server (it will load the middleware)
+# 3. Start CAP server (it will load the middleware)
 cd /path/to/cap-project
 cds watch
 
-# 5. In another terminal, control recording
-cd /path/to/cap-project/app/yourapp
-npx ui5-odata-recorder record \
-  --tenant 100 \
-  --app-url "http://localhost:4004/yourapp/index.html?sap-ui-xx-viewCache=false" \
-  --server-url "http://localhost:4004" \
-  --open
+# 4. Open in browser with recording enabled
+# http://localhost:4004/yourapp/index.html?__record=1&sap-client=100
 
-# 6. Click through, then Ctrl+C
+# 5. Click through your app, then stop (Ctrl+C)
 
-# 7. For replay: Update CAP's ui5.yaml to use sap-fe-mockserver
+# 6. For replay: Update CAP's ui5.yaml to use sap-fe-mockserver
 # Or use standalone UI5 server with ui5.mock.yaml
 ```
 
@@ -352,53 +328,53 @@ npx ui5-odata-recorder record \
 **Scenario:** Record different data for different SAP clients.
 
 ```bash
-# Record client 100 (e.g., US data)
-npx ui5-odata-recorder record --tenant 100 --open
-# ... interact with app ...
-# Ctrl+C
+# 1. Start UI5 server with recording middleware
+ui5 serve
 
-# Record client 200 (e.g., EU data)
-npx ui5-odata-recorder record --tenant 200 --open
+# 2. Record client 100 (e.g., US data)
+# Open: http://localhost:8080/index.html?__record=1&sap-client=100
 # ... interact with app ...
-# Ctrl+C
+# Ctrl+C to stop server
+
+# 3. Record client 200 (e.g., EU data)
+# Start server again: ui5 serve
+# Open: http://localhost:8080/index.html?__record=1&sap-client=200
+# ... interact with app ...
+# Ctrl+C to stop server
 
 # Files created:
 # - Orders-100.json (US orders)
 # - Orders-200.json (EU orders)
 
-# Replay US data
-npx ui5-odata-recorder replay --tenant 100 --open
+# 4. Replay US data
+ui5 serve --config ui5.mock.yaml
+# Open: http://localhost:8080/index.html?sap-client=100
 
-# Replay EU data
-npx ui5-odata-recorder replay --tenant 200 --open
+# 5. Replay EU data  
+ui5 serve --config ui5.mock.yaml
+# Open: http://localhost:8080/index.html?sap-client=200
 ```
 
 ---
 
 ## Advanced Scenarios
 
-### Scenario 1: Fetch Metadata Upfront
+### Scenario 1: Manual Metadata Setup
 
-If your backend requires authentication or is slow, fetch metadata during init:
-
-```bash
-npx ui5-odata-recorder init \
-  --fetch-metadata \
-  --metadata-params "sap-language=EN&sap-value-list=none" \
-  --backend-url https://your-sap-system.com
-```
-
-This stores `metadata.xml` so you don't need backend access during recording.
+If your backend requires authentication or is slow, you can manually fetch and place metadata files in your `localService` folders before recording. This avoids the need for backend access during recording sessions.
 
 ### Scenario 2: Stream Mode for Large Sessions
 
-For capturing thousands of entities, use stream mode to write immediately:
+For capturing thousands of entities, configure stream mode in your middleware to write immediately:
 
-```bash
-npx ui5-odata-recorder record \
-  --tenant 100 \
-  --mode stream \
-  --open
+```yaml
+- name: ui5-middleware-odata-recorder
+  beforeMiddleware: fiori-tools-proxy
+  configuration:
+    autoSave: "stream"  # Write immediately instead of buffering
+    services:
+      - alias: mainService
+        # ... service config
 ```
 
 **When to use:**
@@ -413,7 +389,7 @@ By default, the recorder captures complete entity data instead of just UI-select
 **ui5.record.yaml:**
 ```yaml
 - name: ui5-middleware-odata-recorder
-  afterMiddleware: fiori-tools-proxy
+  beforeMiddleware: fiori-tools-proxy
   configuration:
     # removeSelectParams: true  # This is the default behavior
     autoSave: "stream"
@@ -452,7 +428,7 @@ To record different tenants based only on URL parameters:
 **ui5.record.yaml:**
 ```yaml
 - name: ui5-middleware-odata-recorder
-  afterMiddleware: fiori-tools-proxy
+  beforeMiddleware: fiori-tools-proxy
   configuration:
     defaultTenant: "getTenantFromSAPClient"  # Special value for URL-only mode
     autoSave: "stream"
@@ -492,7 +468,7 @@ For advanced control, manually configure the middleware:
 server:
   customMiddleware:
     - name: ui5-middleware-odata-recorder
-      afterMiddleware: fiori-tools-proxy
+      beforeMiddleware: fiori-tools-proxy
       configuration:
         controlEndpoints: true
         autoSave: "stream"
@@ -577,14 +553,14 @@ await browser.close();
 
 ### Issue: "manifest.json not found"
 
-**Cause:** Running init from wrong directory.
+**Cause:** UI5 project structure not found.
 
 **Solution:**
 ```bash
 # Ensure you're in the app root (where webapp/ exists)
 cd /path/to/your/ui5-app
 ls webapp/manifest.json  # Should exist
-npx ui5-odata-recorder init
+# Then configure middleware in your ui5.yaml
 ```
 
 ### Issue: "No OData services discovered"
@@ -650,7 +626,7 @@ Remove or comment out `fiori-tools-appreload` in your `ui5.record.yaml`:
 # ✅ Correct
 - name: fiori-tools-proxy
 - name: ui5-middleware-odata-recorder
-  afterMiddleware: fiori-tools-proxy
+  beforeMiddleware: fiori-tools-proxy
 
 # ❌ Wrong
 - name: ui5-middleware-odata-recorder
@@ -706,8 +682,8 @@ URL must use exact name: `/odata/v4/orders/Orders`
 **Solution:**
 1. Ensure `$metadata` request happens first:
    ```bash
-   # Refresh app or fetch upfront during init
-   npx ui5-odata-recorder init --fetch-metadata
+   # Refresh app or manually place metadata.xml in localService folders
+   # Metadata request should happen automatically when app loads
    ```
 
 2. Check console for EDMX parsing errors
@@ -768,21 +744,18 @@ During development, use watch mode for hot reloading:
 # Terminal 1: Watch middleware TypeScript compilation
 npm run watch
 
-# Terminal 3: Test with app
+# Terminal 2: Test with app (configure middleware manually in ui5.yaml)
 cd test/orders/app/project1
-npx ui5-odata-recorder init
+ui5 serve
 ```
 
 ### Debugging
 
-Enable debug logs:
+Enable debug logs for middleware:
 
 ```bash
 # For middleware
-DEBUG=odata-recorder:* ui5 serve --config ui5.record.yaml
-
-# For CLI
-DEBUG=ui5-odata-recorder:* npx ui5-odata-recorder record --tenant 100
+DEBUG=odata-recorder:* ui5 serve
 ```
 
 ### Inspect Recorded Data
@@ -807,8 +780,9 @@ cat webapp/localService/mainService/metadata.xml | xmllint --format -
 1. **Test with sample app:**
    ```bash
    cd test/orders/app/project1
-   npx ui5-odata-recorder init
-   npm run dev:record -- --tenant 100 --open
+   # Configure middleware in ui5.yaml, then:
+   ui5 serve
+   # Open: http://localhost:8080/index.html?__record=1&sap-client=100
    ```
 
 2. **Read detailed guides:**

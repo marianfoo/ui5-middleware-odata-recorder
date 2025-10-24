@@ -36,37 +36,6 @@
 - [x] Stream and batch modes
 - [x] UI5 extension definition (`ui5.yaml`)
 
-### CLI Package (`ui5-odata-recorder`)
-- [x] TypeScript setup with proper types
-- [x] Commander.js CLI framework
-- [x] Service discovery
-  - [x] Parse manifest.json
-  - [x] Extract dataSources
-  - [x] Infer OData version
-  - [x] Map models to dataSources
-- [x] YAML generation
-  - [x] `ui5.record.yaml` generator
-  - [x] `ui5.mock.yaml` generator
-  - [x] Service config mapping
-- [x] Folder scaffolding
-  - [x] `localService/<ALIAS>/` creation
-  - [x] Placeholder `metadata.xml`
-  - [x] `data/` subdirectory
-- [x] Metadata fetcher
-  - [x] HTTP(S) client
-  - [x] Query parameter support
-  - [x] Basic auth support
-- [x] Commands
-  - [x] `init` - Project initialization
-  - [x] `record` - Recording session
-  - [x] `replay` - Mockserver session
-- [x] Session management
-  - [x] UI5 server spawning
-  - [x] Browser opening
-  - [x] Graceful shutdown
-  - [x] Auto-relaunch to mock mode
-- [x] package.json script injection
-
 ---
 
 ## ✅ Documentation
@@ -76,7 +45,6 @@
 - [x] USAGE_GUIDE.md (comprehensive usage)
 - [x] PROJECT_SUMMARY.md (implementation summary)
 - [x] Middleware README.md
-- [x] CLI README.md
 - [x] Example files
   - [x] sample-manifest.json
   - [x] ui5.record.example.yaml
@@ -145,30 +113,21 @@
 - [ ] @ui5/cli installed globally
 - [ ] Test UI5 app with manifest.json
 
-### Build & Link
-- [ ] `./setup.sh` runs without errors
-- [ ] `ui5-odata-recorder --version` works
-- [ ] Both packages linked globally
+### Build & Test
+- [ ] `npm run build` runs without errors
+- [ ] Middleware can be imported and used
 
-### Init Command
-- [ ] Discovers services from manifest
-- [ ] Creates folder structure
-- [ ] Generates both YAML files
-- [ ] Adds npm scripts to package.json
+### Manual Configuration
+- [ ] Can configure middleware in ui5.yaml
+- [ ] Middleware captures requests when `?__record=1` is used
+- [ ] Control endpoints work (`/__recorder/start`, `/__recorder/stop`)
+- [ ] Metadata captured automatically
+- [ ] Entity files created correctly
 
-### Record Command
-- [ ] Server starts with `ui5.record.yaml`
-- [ ] Browser opens with `?__record=1&sap-client=<tenant>`
-- [ ] Middleware captures requests
-- [ ] Stop writes files correctly
-- [ ] Metadata captured
-- [ ] Entity files created
-
-### Replay Command
-- [ ] Server starts with `ui5.mock.yaml`
-- [ ] Browser opens with `?sap-client=<tenant>`
+### Mockserver Integration
+- [ ] Can configure `sap-fe-mockserver` in ui5.mock.yaml
 - [ ] Mockserver serves recorded data
-- [ ] No backend requests made
+- [ ] No backend requests made during replay
 
 ### Edge Cases
 - [ ] Empty manifest (no dataSources)
@@ -194,9 +153,8 @@
 ### NPM Publish
 - [ ] Test in private registry first
 - [ ] Publish middleware package
-- [ ] Publish CLI package
 - [ ] Verify install works
-- [ ] Test end-to-end with published versions
+- [ ] Test end-to-end with published version
 
 ### Documentation
 - [ ] Update main README with install instructions
@@ -208,8 +166,8 @@
 
 ## ✅ Status: COMPLETE
 
-All core functionality implemented and documented. Ready for:
-1. Build (`./setup.sh`)
+All core middleware functionality implemented and documented. Ready for:
+1. Build (`npm run build`)
 2. Manual testing
 3. Optional: Add tests
 4. Optional: Publish to npm

@@ -10,9 +10,9 @@ This document provides a comprehensive technical summary of the UI5 OData Record
 
 ## 📦 Package Overview
 
-### Two NPM Packages
+### NPM Package
 
-#### 1. **ui5-middleware-odata-recorder**
+#### **ui5-middleware-odata-recorder**
 Custom UI5 server middleware for recording OData traffic.
 
 **Location:** Root directory (`/`)
@@ -47,48 +47,6 @@ src/
 - Express middleware
 - xml2js (EDMX parsing)
 - zlib (decompression)
-
-#### 2. **ui5-odata-recorder** (CLI)
-Project-aware CLI for discovery, scaffolding, and orchestration.
-
-**Location:** (Not implemented - future feature)
-
-**Key Capabilities:**
-- ✅ Auto-discovers OData services from `manifest.json`
-- ✅ Infers OData version (V2/V4) from models or URI
-- ✅ Generates `ui5.record.yaml` and `ui5.mock.yaml`
-- ✅ Creates `localService/<ALIAS>/` folder structure
-- ✅ Optionally fetches `$metadata` with custom parameters
-- ✅ Starts UI5 server in record or mock mode
-- ✅ Opens browser with correct query parameters
-- ✅ Auto-relaunch in mock mode after recording
-- ✅ Adds npm scripts to `package.json`
-
-**Commands:**
-- `init` - Initialize project (discovery + scaffolding)
-- `record` - Start recording session
-- `replay` - Start mockserver session
-
-**Core Modules:**
-```
-src/
-├── cli.ts                     # Commander.js entry point
-├── discovery.ts               # manifest.json parser
-├── yamlGenerator.ts           # YAML file generator
-├── metadata.ts                # $metadata fetcher
-├── commands/
-│   ├── init.ts                # Initialization command
-│   ├── record.ts              # Recording command
-│   └── replay.ts              # Replay command
-└── types.ts                   # TypeScript interfaces
-```
-
-**Technology:**
-- TypeScript 5.3+
-- Commander.js (CLI framework)
-- yaml (YAML generation)
-- open (browser launching)
-- chalk (terminal colors)
 
 ---
 
@@ -141,8 +99,7 @@ src/
 1. **Browser** → Makes OData requests to UI5 Dev Server
 2. **fiori-tools-proxy** → Forwards requests to backend
 3. **ui5-middleware-odata-recorder** → Taps responses, processes, writes to disk
-4. **CLI** → Orchestrates server start/stop, browser opening, endpoint control
-5. **sap-fe-mockserver** → Serves recorded data in replay mode
+4. **sap-fe-mockserver** → Serves recorded data in replay mode
 
 ---
 
@@ -196,23 +153,7 @@ interface RecordingSession {
 
 ## 🎯 Implementation Details
 
-### 1. Service Discovery (CLI)
-
-**File:** (Not implemented - future feature)
-
-**Process:**
-1. Parse `webapp/manifest.json`
-2. Extract `sap.app.dataSources` with `type: "OData"`
-3. Find all models in `sap.ui5.models` referencing each dataSource
-4. Infer OData version:
-   - Check model type: `sap.ui.model.odata.v2.ODataModel` → v2
-   - Check URI pattern: `/odata/v4/` → v4
-   - Check `odataVersion` in settings
-   - Default: v2
-
-**Output:** Array of `DiscoveredService` objects
-
-### 2. EDMX Parsing (Middleware)
+### 1. EDMX Parsing (Middleware)
 
 **File:** `src/utils/edmxParser.ts`
 
@@ -234,7 +175,7 @@ interface RecordingSession {
 
 **Output:** `Map<EntitySetName, KeyFields[]>`
 
-### 3. OData Normalization (Middleware)
+### 2. OData Normalization (Middleware)
 
 **File:** `src/utils/odataParser.ts`
 
@@ -268,7 +209,7 @@ interface RecordingSession {
 ]
 ```
 
-### 4. Batch Parsing (Middleware)
+### 3. Batch Parsing (Middleware)
 
 **V2 Batch (multipart/mixed):**
 ```
@@ -318,7 +259,7 @@ Entity set extraction from V2 batch responses was a key challenge. The solution 
 
 Both formats are parsed into individual entity arrays and processed separately.
 
-### 5. Entity Deduplication (Middleware)
+### 4. Entity Deduplication (Middleware)
 
 **File:** `src/utils/entityMerger.ts`
 
@@ -336,7 +277,7 @@ Both formats are parsed into individual entity arrays and processed separately.
 - Latest version of entity wins
 - Composite key support (multi-field keys)
 
-### 6. File Writing (Middleware)
+### 5. File Writing (Middleware)
 
 **Stream Mode (`autoSave: "stream"`):**
 - Writes immediately after each response
@@ -365,16 +306,12 @@ Both formats are parsed into individual entity arrays and processed separately.
 
 ## 🔄 Complete Workflow
 
-### Phase 1: Initialization
+### Phase 1: Setup
 
-```bash
-npx ui5-odata-recorder init
-```
+Manual configuration of `ui5.yaml` with middleware.
 
 **Steps:**
-1. Parse `webapp/manifest.json`
-2. Discover OData services
-3. Create folder structure:
+1. Create folder structure:
    ```
    webapp/localService/
      mainService/
@@ -384,43 +321,29 @@ npx ui5-odata-recorder init
        metadata.xml (placeholder)
        data/
    ```
-4. Generate `ui5.record.yaml` with:
+2. Configure `ui5.yaml` with:
    - Proxy configuration
    - Recorder middleware configuration
    - Service definitions
-5. Generate `ui5.mock.yaml` with:
+3. Configure `ui5.mock.yaml` with:
    - sap-fe-mockserver configuration
    - Service paths
-6. Update `package.json` with scripts:
-   ```json
-   {
-     "scripts": {
-       "dev:record": "ui5 serve --config ui5.record.yaml",
-       "dev:mock": "ui5 serve --config ui5.mock.yaml"
-     }
-   }
-   ```
 
 ### Phase 2: Recording
 
-```bash
-npx ui5-odata-recorder record --tenant 100 --open
-```
+Start UI5 server and access with recording enabled.
 
 **Steps:**
-1. CLI calls `/__recorder/start?tenant=100&mode=onStop`
-2. CLI spawns UI5 server: `ui5 serve --config ui5.record.yaml`
-3. CLI opens browser: `http://localhost:8080/index.html?__record=1&sap-client=100`
-4. User interacts with app
-5. Middleware intercepts each OData response:
+1. Start UI5 server: `ui5 serve`
+2. Open browser: `http://localhost:8080/index.html?__record=1&sap-client=100`
+3. User interacts with app
+4. Middleware intercepts each OData response:
    - Decompress if needed
    - Parse $metadata → extract keys
    - Parse response → extract entities
    - Merge entities by key
    - Buffer or write to disk
-6. User presses Ctrl+C
-7. CLI calls `/__recorder/stop`
-8. Middleware flushes all buffers to disk
+5. Stop server (Ctrl+C)
 
 **Output Files:**
 ```
@@ -439,13 +362,11 @@ webapp/localService/
 
 ### Phase 3: Replay
 
-```bash
-npx ui5-odata-recorder replay --tenant 100 --open
-```
+Use mockserver configuration to serve recorded data.
 
 **Steps:**
-1. CLI spawns UI5 server: `ui5 serve --config ui5.mock.yaml`
-2. CLI opens browser: `http://localhost:8080/index.html?sap-client=100`
+1. Start UI5 server: `ui5 serve --config ui5.mock.yaml`
+2. Open browser: `http://localhost:8080/index.html?sap-client=100`
 3. sap-fe-mockserver intercepts OData requests
 4. Mockserver loads data from:
    - `webapp/localService/mainService/data/Orders-100.json`
@@ -457,23 +378,19 @@ npx ui5-odata-recorder replay --tenant 100 --open
 
 ## 🎨 Feature Matrix
 
-| Feature | Middleware | CLI | Status |
-|---------|-----------|-----|--------|
-| OData V2 support | ✅ | ✅ | Complete |
-| OData V4 support | ✅ | ✅ | Complete |
-| $batch parsing | ✅ | N/A | Complete |
-| Multi-service | ✅ | ✅ | Complete |
-| Multi-tenant | ✅ | ✅ | Complete |
-| Key-based dedup | ✅ | N/A | Complete |
-| EDMX parsing | ✅ | ✅ | Complete |
-| Gzip/Brotli | ✅ | N/A | Complete |
-| Control endpoints | ✅ | N/A | Complete |
-| Auto-start | ✅ | ✅ | Complete |
-| YAML generation | N/A | ✅ | Complete |
-| Service discovery | N/A | ✅ | Complete |
-| Metadata fetch | N/A | ✅ | Complete |
-| Browser opener | N/A | ✅ | Complete |
-| Field redaction | ✅ | N/A | Complete |
+| Feature | Status |
+|---------|--------|
+| OData V2 support | ✅ Complete |
+| OData V4 support | ✅ Complete |
+| $batch parsing | ✅ Complete |
+| Multi-service | ✅ Complete |
+| Multi-tenant | ✅ Complete |
+| Key-based dedup | ✅ Complete |
+| EDMX parsing | ✅ Complete |
+| Gzip/Brotli | ✅ Complete |
+| Control endpoints | ✅ Complete |
+| Auto-start | ✅ Complete |
+| Field redaction | ✅ Complete |
 
 ---
 
@@ -523,55 +440,37 @@ your-ui5-app/
 ### Example 1: Manual Developer Workflow
 
 ```bash
-# 1. Initialize
+# 1. Configure ui5.yaml with middleware
 cd /path/to/your/ui5-app
-npx ui5-odata-recorder init
+# Edit ui5.yaml to add ui5-middleware-odata-recorder
 
-# 2. Start your app (if not already running)
-cds watch  # or: ui5 serve --config ui5.record.yaml
+# 2. Start your app
+ui5 serve
 
-# 3. Record
-npx ui5-odata-recorder record \
-  --tenant 100 \
-  --app-url "http://localhost:4004/myapp/index.html?sap-ui-xx-viewCache=false" \
-  --server-url "http://localhost:4004" \
-  --open
+# 3. Record by opening browser with recording enabled
+# http://localhost:8080/index.html?__record=1&sap-client=100
 
 # 4. Click through business process
 
-# 5. Stop (Ctrl+C)
+# 5. Stop server (Ctrl+C)
 
-# 6. Replay
-npx ui5-odata-recorder replay --tenant 100 --open
+# 6. Replay with mockserver
+ui5 serve --config ui5.mock.yaml
+# Open: http://localhost:8080/index.html?sap-client=100
 ```
 
-### Example 2: AI/LLM Automated Workflow
-
-```bash
-# Single init
-npx ui5-odata-recorder init
-
-# Record with auto-transition to mock
-npx ui5-odata-recorder record \
-  --tenant 200 \
-  --app-url "http://localhost:4004/myapp/index.html" \
-  --server-url "http://localhost:4004" \
-  --open \
-  --auto-relaunch-mock
-```
-
-Agent operates UI via MCP DevTools or Playwright, then CLI auto-switches to mock mode for verification.
-
-### Example 3: Multi-Tenant Scenario
+### Example 2: Multi-Tenant Scenario
 
 ```bash
 # Record US client
-npx ui5-odata-recorder record --tenant 100 --open
+ui5 serve
+# Open: http://localhost:8080/index.html?__record=1&sap-client=100
 # ... interact ...
 # Ctrl+C
 
-# Record EU client
-npx ui5-odata-recorder record --tenant 200 --open
+# Record EU client  
+ui5 serve
+# Open: http://localhost:8080/index.html?__record=1&sap-client=200
 # ... interact ...
 # Ctrl+C
 
@@ -580,10 +479,12 @@ npx ui5-odata-recorder record --tenant 200 --open
 # - Orders-200.json (EU data)
 
 # Replay US
-npx ui5-odata-recorder replay --tenant 100 --open
+ui5 serve --config ui5.mock.yaml
+# Open: http://localhost:8080/index.html?sap-client=100
 
 # Replay EU
-npx ui5-odata-recorder replay --tenant 200 --open
+ui5 serve --config ui5.mock.yaml
+# Open: http://localhost:8080/index.html?sap-client=200
 ```
 
 ---
@@ -595,14 +496,6 @@ npx ui5-odata-recorder replay --tenant 200 --open
 - **Express** - Middleware framework
 - **xml2js** - EDMX/XML parsing
 - **zlib** - Gzip/Brotli decompression
-
-### CLI Package
-- **TypeScript 5.3+** - Type-safe implementation
-- **Commander.js 11+** - CLI framework
-- **yaml** - YAML generation
-- **open** - Cross-platform browser launching
-- **chalk** - Terminal colors
-- **ora** - Terminal spinners
 
 ### Runtime Requirements
 - **Node.js ≥ 20**
@@ -731,8 +624,7 @@ npx ui5-odata-recorder replay --tenant 200 --open
 ### For Contributors
 1. Study `src/types.ts` for core contracts
 2. Review middleware flow: `src/middleware/odataRecorder.ts`
-3. Understand CLI orchestration: `src/cli.ts` + `src/commands/`
-4. Extend parsers: `src/utils/*.ts`
+3. Extend parsers: `src/utils/*.ts`
 
 ---
 
@@ -776,7 +668,7 @@ This project delivers a **production-ready, enterprise-grade toolchain** for rec
 ### Key Achievements
 
 **✅ Complete Implementation**
-- Two npm packages (middleware + CLI)
+- Production-ready middleware package
 - Full OData V2/V4 support
 - Multi-service and multi-tenant
 - Smart deduplication
@@ -784,15 +676,9 @@ This project delivers a **production-ready, enterprise-grade toolchain** for rec
 
 **✅ Developer Experience**
 - Zero app code changes required
-- Auto-discovery from manifest
-- One-command scaffolding
+- Simple middleware configuration
 - Immediate replay capability
-
-**✅ AI/LLM Ready**
-- CLI automation
-- Auto-transition modes
-- Programmatic control
-- Clear output
+- REST API control
 
 **✅ Production Quality**
 - TypeScript type safety
