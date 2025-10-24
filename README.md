@@ -9,6 +9,7 @@ Perfect for offline development, testing, and creating mock data without backend
 - 🔄 **Multi-service & Multi-tenant**: Record from multiple OData services with tenant isolation
 - 📊 **Complete Data Capture**: Gets full entities by default (removes `$select` parameters)  
 - ⚡ **Smart & Fast**: Deduplication, compression handling, real-time streaming
+- 🚫 **304 Prevention**: Automatically removes caching headers to ensure fresh metadata (v0.0.7+)
 - 🔧 **Easy Control**: REST API endpoints or URL parameters to start/stop recording
 - 📦 **Ready-to-Use**: Generates files compatible with SAP FE Mockserver
 

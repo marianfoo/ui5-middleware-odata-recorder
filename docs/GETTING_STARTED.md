@@ -484,7 +484,7 @@ server:
             basePath: /odata/v4/orders/
             targetDir: webapp/localService/OrdersService/data
           
-          # Service 2: OData V2
+          # Service 2: OData V2  
           - alias: LegacyService
             version: v2
             basePath: /sap/opu/odata/SAP/LEGACY_SRV/
@@ -673,6 +673,31 @@ http://localhost:8080/index.html?__record=1
 <EntitySet Name="Orders" EntityType="..."/>
 ```
 URL must use exact name: `/odata/v4/orders/Orders`
+
+### Issue: "Metadata returns 304 Not Modified but isn't saved"
+
+**Cause:** Browser cached metadata preventing fresh responses.
+
+**Symptoms:**
+- Browser DevTools shows metadata request with 304 status  
+- No metadata.xml file created in localService folders
+- Recording works when cache is disabled (200 status)
+
+**Solution (Automatic as of v0.0.7+):**
+The middleware now **automatically removes caching headers** from metadata requests to prevent 304 responses:
+
+```
+[OData Recorder] 🔄 Removed caching headers [If-None-Match, If-Modified-Since] from metadata request to ensure fresh response
+```
+
+This forces servers to return **200 with full metadata content** instead of **304 Not Modified**.
+
+**Manual workaround (if needed):**
+- Disable browser cache temporarily (DevTools → Network tab → Disable cache)
+- Or manually place metadata.xml in localService folders before recording
+
+**Why this works:**
+By removing `If-None-Match` (ETag) and `If-Modified-Since` headers, we prevent the server from returning cached responses, ensuring fresh metadata is always fetched and saved.
 
 ### Issue: "Duplicate entities in files"
 

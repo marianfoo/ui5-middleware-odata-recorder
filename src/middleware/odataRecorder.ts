@@ -164,6 +164,33 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
       }
     }
 
+    // Remove caching headers from metadata requests to force fresh responses (prevents 304 Not Modified)
+    if (req.path.includes('$metadata')) {
+      const removedHeaders: string[] = [];
+      
+      // Remove ETag-related headers that cause 304 responses
+      if (req.headers['if-none-match']) {
+        delete req.headers['if-none-match'];
+        removedHeaders.push('If-None-Match');
+      }
+      
+      if (req.headers['if-modified-since']) {
+        delete req.headers['if-modified-since'];
+        removedHeaders.push('If-Modified-Since');
+      }
+      
+      // Also remove other caching headers that might cause 304
+      if (req.headers['cache-control']) {
+        delete req.headers['cache-control'];
+        removedHeaders.push('Cache-Control');
+      }
+      
+      if (removedHeaders.length > 0) {
+        console.log(`[OData Recorder] 🔄 Removed caching headers [${removedHeaders.join(', ')}] from metadata request to ensure fresh response`);
+        debug(`[TRACE] Removed headers to prevent 304: ${removedHeaders.join(', ')}`);
+      }
+    }
+
     // Tap the response
     tapResponse(req, res, next, service, runtime, config, parsers);
   };
@@ -313,12 +340,10 @@ function tapResponse(
       } catch (e) {
         console.error(`[OData Recorder] Decompression failed for ${req.path}:`, e);
         
-        // If metadata decompression fails, try fresh fetch
+        // If metadata decompression fails, provide guidance
         if (req.path.includes('$metadata') && config.writeMetadata) {
-          console.log(`[OData Recorder] Decompression failed for metadata - attempting fresh fetch...`);
-          fetchFreshMetadata(req, service, runtime, config, parsers).catch(err => {
-            console.error(`[OData Recorder] Fresh fetch after decompression failure also failed:`, err);
-          });
+          console.error(`[OData Recorder] ❌ Metadata decompression failed - this may indicate a server error`);
+          console.error(`[OData Recorder] 💡 Try refreshing the page or check if the backend is returning valid metadata`);
         }
         
         return originalEnd(chunk, ...args);
@@ -371,22 +396,13 @@ async function processResponse(
   // Body is already decompressed in tapResponse
   const body = response.body;
 
-  // Handle metadata - only write if valid XML and not 304
+  // Handle metadata - only write if valid XML
   if (response.isMetadata && config.writeMetadata) {
-    // Handle 304 Not Modified - fetch fresh metadata in background if needed
+    // Handle 304 Not Modified (should be rare now due to ETag removal)
     if (response.statusCode === 304) {
-      const hasMetadata = parsers.has(service.alias);
-      if (hasMetadata) {
-        debug(`[TRACE] Skipping metadata - 304 Not Modified (already have metadata)`);
-        return;
-      } else {
-        // We don't have metadata yet! Fetch fresh copy async
-        console.log(`[OData Recorder] 304 cached response - fetching fresh metadata for ${service.alias}...`);
-        fetchFreshMetadata(req, service, runtime, config, parsers).catch(err => {
-          console.error(`[OData Recorder] Failed to fetch fresh metadata:`, err);
-        });
-        return;
-      }
+      console.warn(`[OData Recorder] ⚠️ Received 304 for metadata despite ETag removal - check if caching headers were properly removed`);
+      debug(`[TRACE] Unexpected 304 response for metadata request`);
+      return;
     }
     
     // Skip empty responses
@@ -512,80 +528,6 @@ async function isFileContentIdentical(filePath: string, newContent: string): Pro
   } catch (e) {
     debug(`[TRACE] Error checking file content for ${filePath}:`, e);
     return false; // On error, assume content is different
-  }
-}
-
-/**
- * Write metadata to file
- */
-// Track fresh fetch attempts to prevent infinite loops
-const metadataFetchAttempts = new Set<string>();
-
-/**
- * Fetch fresh metadata when cached response (304) is received
- */
-async function fetchFreshMetadata(
-  req: Request,
-  service: ServiceConfig,
-  runtime: RecorderRuntime,
-  config: RecorderConfig,
-  parsers: Map<string, EdmxParser>
-): Promise<void> {
-  const fetchKey = `${service.alias}-${runtime.tenant}`;
-  
-  // Prevent infinite loops - only try once per service per tenant
-  if (metadataFetchAttempts.has(fetchKey)) {
-    debug(`[TRACE] Skipping fresh fetch - already attempted for ${fetchKey}`);
-    return;
-  }
-  
-  metadataFetchAttempts.add(fetchKey);
-  
-  // Construct the metadata URL from the request
-  const protocol = req.protocol || 'http';
-  const host = req.get('host');
-  const metadataUrl = `${protocol}://${host}${req.path}?${new URLSearchParams(req.query as Record<string, string>).toString()}`;
-  
-  debug(`[TRACE] Fetching fresh metadata from: ${metadataUrl}`);
-  
-  try {
-    // Fetch with cache-busting headers
-    const response = await fetch(metadataUrl, {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Accept': 'application/xml, text/xml'
-      }
-    });
-    
-    if (!response.ok) {
-      console.error(`[OData Recorder] Fresh metadata fetch failed: ${response.status} ${response.statusText}`);
-      return;
-    }
-    
-    const xml = await response.text();
-    
-    // Validate it's actually XML
-    if (!xml.includes('<?xml') && !xml.includes('<edmx:Edmx')) {
-      console.warn(`[OData Recorder] Fresh fetch returned invalid XML for ${service.alias}`);
-      return;
-    }
-    
-    debug(`[TRACE] Fresh metadata fetched: ${xml.length} bytes`);
-    
-    // Write to file
-    await writeMetadata(service.alias, xml, config);
-    
-    // Parse and cache for key extraction
-    const parser = new EdmxParser();
-    await parser.parse(xml);
-    parsers.set(service.alias, parser);
-    runtime.metadataCache.set(service.alias, xml);
-    
-    console.log(`[OData Recorder] ✓ Fresh metadata fetched and updated for ${service.alias} (one-time)`);
-    
-  } catch (e) {
-    console.error(`[OData Recorder] Error fetching fresh metadata for ${service.alias}:`, e);
   }
 }
 
