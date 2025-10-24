@@ -89,7 +89,7 @@ A comprehensive guide for developers to build, configure, and use the UI5 OData 
 6. Your app receives responses as if from a real backend
 
 **Key Mockserver Features:**
-- **Tenant Isolation:** Uses `?sap-client=100` to select `*-100.json` files
+- **Dataset Isolation:** Uses `?recordingId=100` to select `*-100.json` files
 - **Relationship Handling:** Automatically resolves `$expand` from separate JSON files
 - **OData Protocol:** Supports V2 and V4 query syntax
 - **No Backend:** 100% client-side simulation
@@ -288,7 +288,7 @@ cd /path/to/your/ui5-app
 ui5 serve
 
 # 4. Open in browser with recording enabled
-# http://localhost:8080/index.html?__record=1&sap-client=100
+# http://localhost:8080/index.html?__record=1&recordingId=100
 
 # 5. Click through your app, then stop the server (Ctrl+C)
 
@@ -296,7 +296,7 @@ ui5 serve
 ui5 serve --config ui5.mock.yaml
 
 # 7. Open in browser for replay
-# http://localhost:8080/index.html?sap-client=100
+# http://localhost:8080/index.html?recordingId=100
 ```
 
 ### Workflow 2: CAP Application
@@ -315,7 +315,7 @@ cd /path/to/cap-project
 cds watch
 
 # 4. Open in browser with recording enabled
-# http://localhost:4004/yourapp/index.html?__record=1&sap-client=100
+# http://localhost:4004/yourapp/index.html?__record=1&recordingId=100
 
 # 5. Click through your app, then stop (Ctrl+C)
 
@@ -331,14 +331,14 @@ cds watch
 # 1. Start UI5 server with recording middleware
 ui5 serve
 
-# 2. Record client 100 (e.g., US data)
-# Open: http://localhost:8080/index.html?__record=1&sap-client=100
+# 2. Record scenario 100 (e.g., US data)
+# Open: http://localhost:8080/index.html?__record=1&recordingId=100
 # ... interact with app ...
 # Ctrl+C to stop server
 
-# 3. Record client 200 (e.g., EU data)
+# 3. Record scenario 200 (e.g., EU data)
 # Start server again: ui5 serve
-# Open: http://localhost:8080/index.html?__record=1&sap-client=200
+# Open: http://localhost:8080/index.html?__record=1&recordingId=200
 # ... interact with app ...
 # Ctrl+C to stop server
 
@@ -348,11 +348,11 @@ ui5 serve
 
 # 4. Replay US data
 ui5 serve --config ui5.mock.yaml
-# Open: http://localhost:8080/index.html?sap-client=100
+# Open: http://localhost:8080/index.html?recordingId=100
 
 # 5. Replay EU data  
 ui5 serve --config ui5.mock.yaml
-# Open: http://localhost:8080/index.html?sap-client=200
+# Open: http://localhost:8080/index.html?recordingId=200
 ```
 
 ---
@@ -421,16 +421,15 @@ removeSelectParams: false  # Capture only fields selected by UI
 - When UI only shows subset of available fields
 - For relationship testing (navigation properties)
 
-### Scenario 4: Dynamic Tenant Detection
+### Scenario 4: Dynamic Recording ID
 
-To record different tenants based only on URL parameters:
+To record different datasets based on URL parameters:
 
 **ui5.record.yaml:**
 ```yaml
 - name: ui5-middleware-odata-recorder
   beforeMiddleware: fiori-tools-proxy
   configuration:
-    defaultTenant: "getTenantFromSAPClient"  # Special value for URL-only mode
     autoSave: "stream"
     services:
       - alias: MainService
@@ -440,17 +439,17 @@ To record different tenants based only on URL parameters:
 ```
 
 **How it works:**
-- URL: `http://localhost:8080/index.html?sap-client=100`
+- URL: `http://localhost:8080/index.html?recordingId=100`
   - Records to: `Books-100.json`, `Orders-100.json` 
-- URL: `http://localhost:8080/index.html?sap-client=200`
-  - Records to: `Books-200.json`, `Orders-200.json`
-- URL: `http://localhost:8080/index.html` (no sap-client)
-  - Records to: `Books.json`, `Orders.json` (no tenant suffix)
+- URL: `http://localhost:8080/index.html?recordingId=demo`
+  - Records to: `Books-demo.json`, `Orders-demo.json`
+- URL: `http://localhost:8080/index.html` (no recordingId)
+  - Records to: `Books.json`, `Orders.json` (no suffix)
 
 **Benefits:**
-- No configuration needed for different tenants
-- Automatic tenant detection from SAP client parameter
-- Clean files when no tenant is specified
+- No configuration needed for different recording scenarios
+- Descriptive recording IDs (demo, test, prod-sample, etc.)
+- Clean files when no recording ID is specified
 - Perfect for SAP systems with client-dependent data
 
 **When to use:**
@@ -533,7 +532,7 @@ const browser = await chromium.launch();
 const page = await browser.newPage();
 
 // Navigate with recording flag
-await page.goto('http://localhost:8080/index.html?__record=1&sap-client=100');
+await page.goto('http://localhost:8080/index.html?__record=1&recordingId=100');
 
 // Perform actions
 await page.click('button#start');
@@ -782,7 +781,7 @@ cat webapp/localService/mainService/metadata.xml | xmllint --format -
    cd test/orders/app/project1
    # Configure middleware in ui5.yaml, then:
    ui5 serve
-   # Open: http://localhost:8080/index.html?__record=1&sap-client=100
+   # Open: http://localhost:8080/index.html?__record=1&recordingId=100
    ```
 
 2. **Read detailed guides:**

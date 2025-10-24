@@ -46,7 +46,7 @@ server:
         controlEndpoints: true        # default: true - Enable /__recorder/* HTTP endpoints
         autoSave: "stream"            # default: "stream" - Options: "stream" | "onStop"
         writeMetadata: true           # default: true - Capture and write $metadata
-        defaultTenant: "100"          # default: "100" - Default tenant if not in request
+        defaultTenant: "100"          # default: "100" - Default recordingId if not in request URL
         debug: true                   # default: false - Enable debug logging
         redact: []                    # default: [] - Field names to remove from entities (e.g. ["Token", "Password"])
         services:

@@ -56,10 +56,7 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
   console.log('  Auto Save Mode:', config.autoSave);
   console.log('  Auto Start:', config.autoStart ? '✓ Enabled' : '✗ Disabled');
   console.log('  Remove $select:', config.removeSelectParams ? '✓ Enabled (full entities)' : '✗ Disabled');
-  console.log('  Default Tenant:', 
-    config.defaultTenant === 'getTenantFromSAPClient' 
-      ? 'From sap-client URL parameter' 
-      : config.defaultTenant || 'None (no suffix)');
+  console.log('  Default Recording ID:', config.defaultTenant || 'None (no suffix)');
   console.log('  Services:');
   config.services.forEach(s => {
     console.log(`    - ${s.alias}: ${s.basePath} (${s.version})`);
@@ -80,15 +77,10 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
 
   // If auto-start is enabled, announce it
   if (config.autoStart) {
-    let tenantMsg: string;
-    if (config.defaultTenant === 'getTenantFromSAPClient') {
-      tenantMsg = 'with tenant from sap-client URL parameter';
-    } else if (config.defaultTenant) {
-      tenantMsg = `for tenant: ${config.defaultTenant}`;
-    } else {
-      tenantMsg = 'without tenant suffix';
-    }
-    console.log(`[OData Recorder] 🎬 Recording AUTO-STARTED ${tenantMsg}, mode: ${config.autoSave}`);
+    const recordingMsg = config.defaultTenant 
+      ? `with recordingId: ${config.defaultTenant}` 
+      : 'without recordingId suffix';
+    console.log(`[OData Recorder] 🎬 Recording AUTO-STARTED ${recordingMsg}, mode: ${config.autoSave}`);
   }
 
   const parsers = new Map<string, EdmxParser>(); // alias -> parser
@@ -105,11 +97,11 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
 
     // Check for auto-start flag
     if (req.query.__record === '1' && !runtime.active) {
-      const tenant = extractTenant(req, config);
-      debug('Auto-start triggered from query param, tenant:', tenant);
-      startRecording(runtime, tenant, config.autoSave);
-      const tenantMsg = tenant ? `for tenant: ${tenant}` : 'without tenant suffix';
-      console.log(`[OData Recorder] Auto-started recording ${tenantMsg}`);
+      const recordingId = extractRecordingId(req, config);
+      debug('Auto-start triggered from query param, recordingId:', recordingId);
+      startRecording(runtime, recordingId, config.autoSave);
+      const recordingMsg = recordingId ? `with recordingId: ${recordingId}` : 'without recordingId suffix';
+      console.log(`[OData Recorder] Auto-started recording ${recordingMsg}`);
     }
 
     // If not recording, just pass through
@@ -192,10 +184,10 @@ async function handleControlEndpoint(
 
   switch (action) {
     case 'start':
-      const tenant = (req.query.tenant as string) || config.defaultTenant;
+      const recordingId = (req.query.recordingId as string) || config.defaultTenant;
       const mode = (req.query.mode as 'onStop' | 'stream') || config.autoSave;
-      startRecording(runtime, tenant, mode);
-      res.json({ status: 'started', tenant, mode });
+      startRecording(runtime, recordingId, mode);
+      res.json({ status: 'started', recordingId, mode });
       break;
 
     case 'stop':
@@ -226,14 +218,14 @@ async function handleControlEndpoint(
 /**
  * Start recording
  */
-function startRecording(runtime: RecorderRuntime, tenant: string | undefined, mode: 'onStop' | 'stream'): void {
-  debug('startRecording called:', { tenant, mode });
+function startRecording(runtime: RecorderRuntime, recordingId: string | undefined, mode: 'onStop' | 'stream'): void {
+  debug('startRecording called:', { recordingId, mode });
   runtime.active = true;
-  runtime.tenant = tenant;
+  runtime.tenant = recordingId; // Keep using tenant property internally for backward compatibility
   runtime.mode = mode;
   runtime.buffers.clear();
-  const tenantMsg = tenant ? `for tenant: ${tenant}` : 'without tenant suffix';
-  console.log(`[OData Recorder] 🎬 Recording ACTIVE ${tenantMsg}, mode: ${mode}`);
+  const recordingMsg = recordingId ? `with recordingId: ${recordingId}` : 'without recordingId suffix';
+  console.log(`[OData Recorder] 🎬 Recording ACTIVE ${recordingMsg}, mode: ${mode}`);
 }
 
 /**
@@ -244,35 +236,31 @@ function findMatchingService(requestPath: string, services: ServiceConfig[]): Se
 }
 
 /**
- * Extract tenant from request
+ * Extract recording ID from request
  */
-export function extractTenant(req: Request, config: RecorderConfig): string | undefined {
-  // Special case: if defaultTenant is "getTenantFromSAPClient", only use URL parameter
-  if (config.defaultTenant === 'getTenantFromSAPClient') {
-    const sapClient = req.query['sap-client'] as string;
-    // Return undefined if sap-client is missing or empty (no tenant suffix)
-    return sapClient && sapClient.trim() !== '' ? sapClient : undefined;
+export function extractRecordingId(req: Request, config: RecorderConfig): string | undefined {
+  // URL parameter takes precedence over config
+  const recordingId = req.query['recordingId'] as string;
+  if (recordingId && recordingId.trim() !== '') {
+    return recordingId;
   }
   
-  // Standard behavior: try sap-client query param first, then fall back to default
-  if (req.query['sap-client']) {
-    return req.query['sap-client'] as string;
-  }
+  // Fall back to default from config
   return config.defaultTenant; // undefined if not specified in config
 }
 
 /**
- * Create entity filename with or without tenant suffix
+ * Create entity filename with or without recording ID suffix
  */
-export function createEntityFileName(entitySet: string, tenant?: string): string {
-  return tenant ? `${entitySet}-${tenant}.json` : `${entitySet}.json`;
+export function createEntityFileName(entitySet: string, recordingId?: string): string {
+  return recordingId ? `${entitySet}-${recordingId}.json` : `${entitySet}.json`;
 }
 
 /**
  * Create buffer key for entity storage
  */
-export function createBufferKey(alias: string, tenant: string | undefined, entitySet: string): string {
-  return `${alias}|${tenant || ''}|${entitySet}`;
+export function createBufferKey(alias: string, recordingId: string | undefined, entitySet: string): string {
+  return `${alias}|${recordingId || ''}|${entitySet}`;
 }
 
 /**
@@ -507,7 +495,7 @@ async function processSingleResponse(
     runtime.buffers.set(bufferKey, merged);
   }
 
-  console.log(`[OData Recorder] Captured ${entities.length} entities for ${entitySet}${runtime.tenant ? ` (tenant: ${runtime.tenant})` : ''}`);
+  console.log(`[OData Recorder] Captured ${entities.length} entities for ${entitySet}${runtime.tenant ? ` (recordingId: ${runtime.tenant})` : ''}`);
 }
 
 /**
@@ -632,13 +620,13 @@ async function writeMetadata(alias: string, xml: string, config: RecorderConfig)
 async function writeEntities(
   service: ServiceConfig,
   entitySet: string,
-  tenant: string | undefined,
+  recordingId: string | undefined,
   entities: any[],
   keys: string[],
   parsers: Map<string, EdmxParser>
 ): Promise<void> {
-  // Create filename: with tenant suffix only if tenant is specified
-  const fileName = createEntityFileName(entitySet, tenant);
+  // Create filename: with recording ID suffix only if recording ID is specified
+  const fileName = createEntityFileName(entitySet, recordingId);
   const filePath = path.join(service.targetDir, fileName);
   await ensureDir(service.targetDir);
 
@@ -689,7 +677,7 @@ async function flushAllBuffers(
       const parser = parsers.get(alias);
       const keys = parser?.getKeysForEntitySet(entitySet) || [];
       
-      console.log(`[OData Recorder] Processing ${entities.length} entities for ${entitySet}${tenant ? ` (tenant: ${tenant})` : ''}`);
+      console.log(`[OData Recorder] Processing ${entities.length} entities for ${entitySet}${tenant ? ` (recordingId: ${tenant})` : ''}`);
       
       const writePromise = writeEntities(service, entitySet, tenant, entities, keys, parsers)
         .catch(err => {

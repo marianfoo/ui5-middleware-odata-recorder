@@ -14,7 +14,7 @@ export type RecorderConfig = {
   controlEndpoints: boolean;
   autoSave: "onStop" | "stream";
   writeMetadata: boolean;
-  defaultTenant?: string; // optional - undefined means no tenant suffix
+  defaultTenant?: string; // optional - undefined means no recordingId suffix (kept as defaultTenant for config compatibility)
   autoStart: boolean;
   removeSelectParams?: boolean; // optional - remove $select from requests to get full entities
   redact?: string[];
@@ -22,11 +22,11 @@ export type RecorderConfig = {
 };
 
 // Middleware runtime state  
-export type BufferKey = string; // alias|tenant|entitySet (tenant can be empty)
+export type BufferKey = string; // alias|recordingId|entitySet (recordingId can be empty)
 
 export interface RecorderRuntime {
   active: boolean;
-  tenant?: string; // undefined means no tenant suffix
+  tenant?: string; // undefined means no recordingId suffix (kept as tenant for internal compatibility)
   mode: "onStop" | "stream";
   buffers: Map<BufferKey, any[]>;
   entityKeys: Map<string, string[]>; // `${alias}:${entityType}` -> ["ID", ...]
@@ -35,7 +35,7 @@ export interface RecorderRuntime {
 
 export interface EntitySetInfo {
   alias: string;
-  tenant?: string; // undefined means no tenant suffix
+  tenant?: string; // undefined means no recordingId suffix (kept as tenant for internal compatibility)
   entitySet: string;
   entityType?: string;
 }

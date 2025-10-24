@@ -26,7 +26,7 @@ Custom UI5 server middleware for recording OData traffic.
 - ✅ Writes FE-mockserver-compatible JSON files
 - ✅ REST control endpoints: `/start`, `/stop`, `/status`, `/flush`
 - ✅ Auto-start with `?__record=1` query parameter
-- ✅ Multi-tenant support via `sap-client` parameter
+- ✅ Multi-dataset support via `recordingId` parameter
 - ✅ Stream or batch write modes
 - ✅ Privacy: redact sensitive fields
 
@@ -57,7 +57,7 @@ src/
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     UI5 Application                         │
-│  (Browser makes OData requests with ?sap-client=<tenant>)   │
+│  (Browser makes OData requests with ?recordingId=<id>)      │
 └────────────────────────┬────────────────────────────────────┘
                          │
                          ▼
@@ -335,7 +335,7 @@ Start UI5 server and access with recording enabled.
 
 **Steps:**
 1. Start UI5 server: `ui5 serve`
-2. Open browser: `http://localhost:8080/index.html?__record=1&sap-client=100`
+2. Open browser: `http://localhost:8080/index.html?__record=1&recordingId=100`
 3. User interacts with app
 4. Middleware intercepts each OData response:
    - Decompress if needed
@@ -366,7 +366,7 @@ Use mockserver configuration to serve recorded data.
 
 **Steps:**
 1. Start UI5 server: `ui5 serve --config ui5.mock.yaml`
-2. Open browser: `http://localhost:8080/index.html?sap-client=100`
+2. Open browser: `http://localhost:8080/index.html?recordingId=100`
 3. sap-fe-mockserver intercepts OData requests
 4. Mockserver loads data from:
    - `webapp/localService/mainService/data/Orders-100.json`
@@ -448,7 +448,7 @@ cd /path/to/your/ui5-app
 ui5 serve
 
 # 3. Record by opening browser with recording enabled
-# http://localhost:8080/index.html?__record=1&sap-client=100
+# http://localhost:8080/index.html?__record=1&recordingId=100
 
 # 4. Click through business process
 
@@ -456,35 +456,35 @@ ui5 serve
 
 # 6. Replay with mockserver
 ui5 serve --config ui5.mock.yaml
-# Open: http://localhost:8080/index.html?sap-client=100
+# Open: http://localhost:8080/index.html?recordingId=100
 ```
 
-### Example 2: Multi-Tenant Scenario
+### Example 2: Multi-Dataset Scenario
 
 ```bash
-# Record US client
+# Record dataset 100
 ui5 serve
-# Open: http://localhost:8080/index.html?__record=1&sap-client=100
+# Open: http://localhost:8080/index.html?__record=1&recordingId=100
 # ... interact ...
 # Ctrl+C
 
-# Record EU client  
+# Record demo dataset  
 ui5 serve
-# Open: http://localhost:8080/index.html?__record=1&sap-client=200
+# Open: http://localhost:8080/index.html?__record=1&recordingId=demo
 # ... interact ...
 # Ctrl+C
 
 # Files created:
-# - Orders-100.json (US data)
-# - Orders-200.json (EU data)
+# - Orders-100.json (production-like data)
+# - Orders-demo.json (demo data)
 
-# Replay US
+# Replay dataset 100
 ui5 serve --config ui5.mock.yaml
-# Open: http://localhost:8080/index.html?sap-client=100
+# Open: http://localhost:8080/index.html?recordingId=100
 
-# Replay EU
+# Replay demo dataset
 ui5 serve --config ui5.mock.yaml
-# Open: http://localhost:8080/index.html?sap-client=200
+# Open: http://localhost:8080/index.html?recordingId=demo
 ```
 
 ---
