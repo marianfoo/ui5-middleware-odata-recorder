@@ -5,13 +5,14 @@ A comprehensive guide for developers to build, configure, and use the UI5 OData 
 ## 📋 Table of Contents
 
 1. [Overview](#overview)
-2. [How It Works](#how-it-works)
-3. [Installation & Setup](#installation--setup)
-4. [Project Structure](#project-structure)
-5. [Configuration Guide](#configuration-guide)
-6. [Common Workflows](#common-workflows)
-7. [Advanced Scenarios](#advanced-scenarios)
-8. [Troubleshooting](#troubleshooting)
+2. [Understanding recordingId](#understanding-recordingid)
+3. [How It Works](#how-it-works)
+4. [Installation & Setup](#installation--setup)
+5. [Project Structure](#project-structure)
+6. [Configuration Guide](#configuration-guide)
+7. [Common Workflows](#common-workflows)
+8. [Advanced Scenarios](#advanced-scenarios)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -23,8 +24,91 @@ A comprehensive guide for developers to build, configure, and use the UI5 OData 
 - ✅ **Work Offline** - Develop without VPN or backend access
 - ✅ **Fast Development** - No backend startup time
 - ✅ **Reliable Testing** - Consistent data for automated tests
-- ✅ **Multi-Tenant** - Record different data per client/tenant
+- ✅ **Multi-Tenant** - Record different data per client/tenant using `recordingId`
 - ✅ **Zero Code Changes** - Pure middleware configuration
+
+## Understanding recordingId
+
+The `recordingId` is the **key concept** that enables multi-dataset recording and replay. It acts as a suffix for your data files, allowing you to maintain separate datasets for different scenarios.
+
+### How recordingId Works
+
+**Without recordingId (Simple Mode):**
+```bash
+# Recording URL
+http://localhost:8080/index.html?__record=1
+
+# Files created:
+webapp/localService/mainService/data/
+├── Books.json      ← Clean filenames
+├── Orders.json
+└── metadata.xml
+
+# Replay URL  
+http://localhost:8080/index.html
+```
+
+**With recordingId (Multi-Dataset Mode):**
+```bash
+# Recording URLs
+http://localhost:8080/index.html?__record=1&recordingId=demo
+http://localhost:8080/index.html?__record=1&recordingId=100
+http://localhost:8080/index.html?__record=1&recordingId=200
+
+# Files created:
+webapp/localService/mainService/data/
+├── Books-demo.json     ← recordingId: "demo"
+├── Orders-demo.json
+├── Books-100.json      ← recordingId: "100" (SAP client 100)
+├── Orders-100.json
+├── Books-200.json      ← recordingId: "200" (SAP client 200)  
+├── Orders-200.json
+└── metadata.xml
+
+# Replay URLs (select specific dataset)
+http://localhost:8080/index.html?recordingId=demo
+http://localhost:8080/index.html?recordingId=100
+http://localhost:8080/index.html?recordingId=200
+```
+
+### Common recordingId Use Cases
+
+| recordingId | Use Case | Example Files |
+|-------------|----------|---------------|
+| `demo` | Demo/presentation data | `Books-demo.json` |
+| `100`, `200`, `300` | SAP client numbers | `Orders-100.json` |
+| `dev`, `test`, `prod` | Environment-specific data | `Customers-dev.json` |
+| `scenario1`, `scenario2` | Test scenarios | `Products-scenario1.json` |
+| `empty`, `full` | Data volume variants | `Items-empty.json` |
+
+### Configuration Options
+
+**1. URL Parameter (Dynamic):**
+```bash
+# Specify recordingId in URL - most flexible
+http://localhost:8080/index.html?__record=1&recordingId=YOUR_ID
+```
+
+**2. Configuration Default:**
+```yaml
+configuration:
+  defaultTenant: "100"  # Default recordingId if not in URL
+  autoStart: true       # Start recording immediately
+```
+
+**3. REST API:**
+```bash
+# Start with specific recordingId
+curl "http://localhost:8080/__recorder/start?recordingId=demo&mode=stream"
+```
+
+### Why Use recordingId?
+
+- 🎯 **Isolation**: Keep different datasets separate (dev vs prod data)
+- 🏢 **Multi-Tenant**: Support different SAP clients in same app
+- 📊 **Scenarios**: Test with empty, partial, or full datasets  
+- 🔄 **Variants**: Record different user roles or permissions
+- 🚀 **Demos**: Clean presentation data separate from test data
 
 ---
 
@@ -274,9 +358,9 @@ server:
 
 ## Common Workflows
 
-### Workflow 1: Standalone UI5 App
+### Workflow 1: Standalone UI5 App with recordingId
 
-**Scenario:** You have a standalone UI5 app connecting to a remote OData backend.
+**Scenario:** You have a standalone UI5 app connecting to a remote OData backend and want to record demo data.
 
 ```bash
 # 1. Navigate to your app
@@ -287,21 +371,23 @@ cd /path/to/your/ui5-app
 # 3. Start recording mode
 ui5 serve
 
-# 4. Open in browser with recording enabled
-# http://localhost:8080/index.html?__record=1&recordingId=100
+# 4. Record demo dataset
+# Open: http://localhost:8080/index.html?__record=1&recordingId=demo
+# ✅ Creates: Books-demo.json, Orders-demo.json
 
-# 5. Click through your app, then stop the server (Ctrl+C)
+# 5. Click through your app to capture data, then stop the server (Ctrl+C)
 
-# 6. Start replay mode with mockserver configuration
+# 6. Start replay mode with mockserver configuration  
 ui5 serve --config ui5.mock.yaml
 
-# 7. Open in browser for replay
-# http://localhost:8080/index.html?recordingId=100
+# 7. Replay your demo data
+# Open: http://localhost:8080/index.html?recordingId=demo
+# ✅ Uses: Books-demo.json, Orders-demo.json
 ```
 
-### Workflow 2: CAP Application
+### Workflow 2: CAP Application with recordingId
 
-**Scenario:** You have a CAP project with one or more Fiori apps.
+**Scenario:** You have a CAP project with Fiori apps and want to record different client datasets.
 
 ```bash
 # 1. Navigate to your Fiori app
@@ -314,13 +400,23 @@ cd /path/to/cap-project/app/yourapp
 cd /path/to/cap-project
 cds watch
 
-# 4. Open in browser with recording enabled
-# http://localhost:4004/yourapp/index.html?__record=1&recordingId=100
+# 4. Record Client 100 dataset
+# Open: http://localhost:4004/yourapp/index.html?__record=1&recordingId=100
+# ✅ Creates: Books-100.json, Orders-100.json
+# Click through app, then stop (Ctrl+C)
 
-# 5. Click through your app, then stop (Ctrl+C)
+# 5. Record Client 200 dataset
+cds watch  # Start CAP again
+# Open: http://localhost:4004/yourapp/index.html?__record=1&recordingId=200
+# ✅ Creates: Books-200.json, Orders-200.json
+# Click through app, then stop (Ctrl+C)
 
-# 6. For replay: Update CAP's ui5.yaml to use sap-fe-mockserver
-# Or use standalone UI5 server with ui5.mock.yaml
+# 6. Replay specific client data
+# Option A: Use CAP with mockserver configuration
+# Option B: Use standalone UI5 server
+ui5 serve --config ui5.mock.yaml
+# Open: http://localhost:8080/index.html?recordingId=100  # Client 100 data
+# Open: http://localhost:8080/index.html?recordingId=200  # Client 200 data
 ```
 
 ### Workflow 3: Multi-Tenant Recording

@@ -42,7 +42,7 @@ server:
       configuration:
         controlEndpoints: true        # default: true - Enable /__recorder/* HTTP endpoints
         autoSave: "stream"    # default: "stream" - Options: "stream" | "onStop"
-        autoStart: true
+        autoStart: false
         writeMetadata: true           # default: true - Capture and write $metadata
         # defaultTenant: "100"          # default: "100" - Default recordingId if not in request URL
         debug: true                   # default: false - Enable debug logging

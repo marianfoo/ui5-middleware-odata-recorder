@@ -45,29 +45,79 @@ server:
 
 > 💡 **Tip**: Disable `fiori-tools-appreload` during recording to prevent reload loops
 
-## 🚀 Usage
+## 🚀 Quick Start
 
-**Start recording with URL parameter:**
+### 1. Start Recording with recordingId
 
-```url
-http://localhost:8080/index.html?__record=1
-```
-
-**Or use REST API:**
+**Using URL parameters (recommended):**
 
 ```bash
-# Start
-curl "http://localhost:8080/__recorder/start"
+# Start UI5 server
+ui5 serve
 
-# Stop  
+# Open browser with recording enabled and recordingId
+http://localhost:8080/index.html?__record=1&recordingId=demo
+
+# Or for multi-tenant scenarios
+http://localhost:8080/index.html?__record=1&recordingId=100  # SAP client 100
+http://localhost:8080/index.html?__record=1&recordingId=200  # SAP client 200
+```
+
+**Using REST API:**
+
+```bash
+# Start recording with specific recordingId
+curl "http://localhost:8080/__recorder/start?recordingId=demo&mode=stream"
+
+# Check recording status
+curl "http://localhost:8080/__recorder/status"
+
+# Stop recording and save files
 curl "http://localhost:8080/__recorder/stop"
 ```
 
-**Auto-start on server load:**
+### 2. What Gets Recorded
+
+Files are created with recordingId suffix:
+
+```text
+webapp/localService/mainService/data/
+├── Books-demo.json      ← recordingId: "demo"
+├── Orders-demo.json
+├── Books-100.json       ← recordingId: "100"  
+├── Orders-100.json
+└── metadata.xml
+```
+
+### 3. Replay with Mockserver
+
+```bash
+# Switch to mockserver configuration
+ui5 serve --config ui5.mock.yaml
+
+# Open with specific dataset
+http://localhost:8080/index.html?recordingId=demo
+```
+
+### 4. No recordingId (Simple Mode)
+
+```bash
+# Record without recordingId suffix
+http://localhost:8080/index.html?__record=1
+
+# Creates clean filenames
+webapp/localService/mainService/data/
+├── Books.json           ← No suffix
+├── Orders.json
+└── metadata.xml
+```
+
+### 5. Auto-start Configuration
 
 ```yaml
 configuration:
   autoStart: true
+  defaultTenant: "demo"  # Default recordingId if not in URL
 ```
 
 ## 📂 Output
@@ -99,13 +149,17 @@ For detailed guides, advanced features, and troubleshooting:
 
 **[📚 Getting Started Guide →](docs/GETTING_STARTED.md)**
 
-Covers:
+Covers installation, configuration, workflows, and troubleshooting.
 
-- Multi-tenant recording
-- Full entity capture details  
-- Advanced configuration scenarios
-- Integration with CAP projects
-- Troubleshooting common issues
+**[🎯 recordingId Usage Guide →](docs/RECORDINGID_GUIDE.md)**
+
+Complete guide for multi-dataset recording:
+
+- Multi-tenant SAP client recording
+- Test scenario management
+- Environment-specific datasets
+- REST API control
+- Best practices and troubleshooting
 
 ## 📄 License
 

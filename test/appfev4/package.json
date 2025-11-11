@@ -28,6 +28,7 @@
     "int-test": "fiori run --config ./ui5-mock.yaml --open \"/test/integration/opaTests.qunit.html\"",
     "start-variants-management": "fiori run --open \"/preview.html#app-preview\"",
     "dev:record": "fiori run --config ./ui5.record.yaml --open \"/index.html?sap-client=100\"",
+    "dev:record:custom": "fiori run --config ./ui5.record.yaml --open \"/index.html?sap-client=100&recordingId=custom\"",
     "dev:mock": "ui5 serve --config ui5.mock.yaml",
     "run:mock": "ui5 serve --config ui5-mock.yaml"
   },
