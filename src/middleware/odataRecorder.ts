@@ -325,6 +325,20 @@ function tapResponse(
       chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     }
 
+    // Check status code first - skip recording for error responses
+    const statusCode = res.statusCode;
+    if (statusCode >= 400) {
+      // Skip recording for client errors (4xx) and server errors (5xx)
+      if (statusCode === 401 || statusCode === 403) {
+        debug(`[TRACE] ⚠️ Skipping recording for authentication error (${statusCode}): ${req.path}`);
+        console.log(`[OData Recorder] ⚠️ Skipping recording due to authentication error (${statusCode}) - please authenticate first`);
+      } else {
+        debug(`[TRACE] ⚠️ Skipping recording for error response (${statusCode}): ${req.path}`);
+        console.log(`[OData Recorder] ⚠️ Skipping recording due to error response (${statusCode}): ${req.path}`);
+      }
+      return originalEnd(chunk, ...args);
+    }
+
     const rawBuffer = Buffer.concat(chunks);
     const encoding = res.getHeader('content-encoding');
     
