@@ -95,8 +95,9 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
       return handleControlEndpoint(req, res, runtime, config, parsers);
     }
 
-    // Check for auto-start flag
-    if (req.query.__record === '1' && !runtime.active) {
+    // Check for auto-start flag or recordingId parameter
+    const shouldAutoStart = req.query.__record === '1' || req.query.recordingId;
+    if (shouldAutoStart && !runtime.active) {
       const recordingId = extractRecordingId(req, config);
       debug('Auto-start triggered from query param, recordingId:', recordingId);
       startRecording(runtime, recordingId, config.autoSave);
@@ -211,7 +212,7 @@ async function handleControlEndpoint(
 
   switch (action) {
     case 'start':
-      const recordingId = (req.query.recordingId as string) || config.defaultTenant;
+      const recordingId = extractRecordingId(req, config);
       const mode = (req.query.mode as 'onStop' | 'stream') || config.autoSave;
       startRecording(runtime, recordingId, mode);
       res.json({ status: 'started', recordingId, mode });
