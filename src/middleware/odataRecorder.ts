@@ -14,11 +14,39 @@ import { ODataParser } from '../utils/odataParser';
 import { EntityMerger } from '../utils/entityMerger';
 import { removeSelectFromRequest } from '../utils/urlUtils';
 
+// ANSI color codes for terminal output
+const colors = {
+  reset: '\x1b[0m',
+  bright: '\x1b[1m',
+  dim: '\x1b[2m',
+  
+  // Foreground colors
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  cyan: '\x1b[36m',
+  white: '\x1b[37m',
+  gray: '\x1b[90m',
+  
+  // Background colors
+  bgRed: '\x1b[41m',
+  bgGreen: '\x1b[42m',
+  bgYellow: '\x1b[43m',
+  bgBlue: '\x1b[44m',
+};
+
+// Helper function to colorize text
+function colorize(text: string, color: keyof typeof colors): string {
+  return `${colors[color]}${text}${colors.reset}`;
+}
+
 // Global debug from environment OR config
 let DEBUG = process.env.DEBUG === '1' || process.env.DEBUG === 'true';
 
 function debug(...args: any[]) {
-  if (DEBUG) console.log('[RECORDER DEBUG]', ...args);
+  if (DEBUG) console.log(colorize('[RECORDER DEBUG]', 'cyan'), ...args);
 }
 
 /**
@@ -54,23 +82,23 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
   
   debug('Processed config:', JSON.stringify(config, null, 2));
 
-  console.log('\n' + '='.repeat(60));
-  console.log('  UI5 OData Recorder Middleware Loaded ✓');
-  console.log('='.repeat(60));
-  console.log('  Control Endpoints:', config.controlEndpoints ? '✓ Enabled' : '✗ Disabled');
-  console.log('  Auto Save Mode:', config.autoSave);
-  console.log('  Auto Start:', config.autoStart ? '✓ Enabled' : '✗ Disabled');
-  console.log('  Remove $select:', config.removeSelectParams ? '✓ Enabled (full entities)' : '✗ Disabled');
-  console.log('  Expanded Nav Strategy:', config.expandedNavigationStrategy);
-  console.log('  Enrich Foreign Keys:', config.enrichForeignKeys ? '✓ Enabled' : '✗ Disabled');
-  console.log('  Backend URL:', config.backendUrl || 'None (no proactive metadata fetch)');
-  console.log('  Default Recording ID:', config.defaultTenant || 'None (no suffix)');
+  console.log('\n' + colorize('='.repeat(60), 'cyan'));
+  console.log(colorize('  UI5 OData Recorder Middleware Loaded ✓', 'bright'));
+  console.log(colorize('='.repeat(60), 'cyan'));
+  console.log('  Control Endpoints:', config.controlEndpoints ? colorize('✓ Enabled', 'green') : colorize('✗ Disabled', 'gray'));
+  console.log('  Auto Save Mode:', colorize(config.autoSave, 'cyan'));
+  console.log('  Auto Start:', config.autoStart ? colorize('✓ Enabled', 'green') : colorize('✗ Disabled', 'gray'));
+  console.log('  Remove $select:', config.removeSelectParams ? colorize('✓ Enabled (full entities)', 'green') : colorize('✗ Disabled', 'gray'));
+  console.log('  Expanded Nav Strategy:', colorize(config.expandedNavigationStrategy || 'auto', 'cyan'));
+  console.log('  Enrich Foreign Keys:', config.enrichForeignKeys ? colorize('✓ Enabled', 'green') : colorize('✗ Disabled', 'gray'));
+  console.log('  Backend URL:', config.backendUrl ? colorize(config.backendUrl, 'cyan') : colorize('None (no proactive metadata fetch)', 'gray'));
+  console.log('  Default Recording ID:', config.defaultTenant ? colorize(config.defaultTenant, 'cyan') : colorize('None (no suffix)', 'gray'));
   console.log('  Services:');
   config.services.forEach(s => {
-    console.log(`    - ${s.alias}: ${s.basePath} (${s.version})`);
+    console.log(`    - ${colorize(s.alias, 'magenta')}: ${s.basePath} (${s.version})`);
   });
-  console.log('  Debug Mode:', DEBUG ? '✓ Enabled' : '✗ Disabled');
-  console.log('='.repeat(60) + '\n');
+  console.log('  Debug Mode:', DEBUG ? colorize('✓ Enabled', 'green') : colorize('✗ Disabled', 'gray'));
+  console.log(colorize('='.repeat(60), 'cyan') + '\n');
 
   debug('Full config:', config);
 
@@ -86,9 +114,9 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
   // If auto-start is enabled, announce it and load metadata
   if (config.autoStart) {
     const recordingMsg = config.defaultTenant 
-      ? `with recordingId: ${config.defaultTenant}` 
+      ? `with recordingId: ${colorize(config.defaultTenant, 'cyan')}` 
       : 'without recordingId suffix';
-    console.log(`[OData Recorder] 🎬 Recording AUTO-STARTED ${recordingMsg}, mode: ${config.autoSave}`);
+    console.log(colorize('[OData Recorder]', 'magenta'), colorize('🎬 Recording AUTO-STARTED', 'green'), recordingMsg + ', mode:', colorize(config.autoSave, 'cyan'));
   }
 
   const parsers = new Map<string, EdmxParser>(); // alias -> parser
@@ -118,8 +146,8 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
       const recordingId = extractRecordingId(req, config);
       debug('Auto-start triggered from query param, recordingId:', recordingId);
       startRecording(runtime, recordingId, config.autoSave);
-      const recordingMsg = recordingId ? `with recordingId: ${recordingId}` : 'without recordingId suffix';
-      console.log(`[OData Recorder] Auto-started recording ${recordingMsg}`);
+      const recordingMsg = recordingId ? `with recordingId: ${colorize(recordingId, 'cyan')}` : 'without recordingId suffix';
+      console.log(colorize('[OData Recorder]', 'magenta'), colorize('Auto-started recording', 'green'), recordingMsg);
       
       // Proactively load metadata for all services
       for (const service of config.services) {
@@ -145,7 +173,7 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
       return next();
     }
 
-    console.log(`[OData Recorder] ✓ Intercepting ${req.method} ${req.path} for service ${service.alias}`);
+    console.log(colorize('[OData Recorder]', 'magenta'), colorize('✓ Intercepting', 'green'), `${req.method} ${req.path} for service`, colorize(service.alias, 'cyan'));
     debug('[TRACE] Setting up response tap...');
     debug('Request details:', { method: req.method, path: req.path, query: req.query, contentType: req.headers['content-type'] });
 
@@ -185,7 +213,7 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
           debug(`[TRACE] Modified batch body (${body?.length || 0} -> ${modified.body?.length || 0} chars)`);
         }
         
-        console.log(`[OData Recorder] 🔧 Removed $select parameters from request to get full entities`);
+        console.log(colorize('[OData Recorder]', 'magenta'), colorize('🔧 Removed $select parameters', 'yellow'), 'from request to get full entities');
       }
     }
 
@@ -211,7 +239,7 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
       }
       
       if (removedHeaders.length > 0) {
-        console.log(`[OData Recorder] 🔄 Removed caching headers [${removedHeaders.join(', ')}] from metadata request to ensure fresh response`);
+        console.log(colorize('[OData Recorder]', 'magenta'), colorize('🔄 Removed caching headers', 'yellow'), `[${removedHeaders.join(', ')}] from metadata request to ensure fresh response`);
         debug(`[TRACE] Removed headers to prevent 304: ${removedHeaders.join(', ')}`);
       }
     }
@@ -298,7 +326,7 @@ async function loadMetadataForService(
   // Skip if no backend URL configured
   if (!backendUrl) {
     debug(`[TRACE] No backendUrl configured, skipping proactive metadata fetch for ${service.alias}`);
-    console.log(`[OData Recorder] ℹ️ Skipping proactive metadata fetch for ${service.alias} - no backendUrl configured`);
+    console.log(colorize('[OData Recorder]', 'magenta'), colorize('ℹ️  Skipping proactive metadata fetch', 'blue'), `for ${colorize(service.alias, 'cyan')} - no backendUrl configured`);
     return;
   }
 
@@ -335,10 +363,10 @@ async function loadMetadataForService(
       await writeMetadata(service.alias, xmlData, config);
     }
     
-    console.log(`[OData Recorder] ✓ Proactively loaded metadata for ${service.alias}`);
+    console.log(colorize('[OData Recorder]', 'magenta'), colorize('✓ Proactively loaded metadata', 'green'), `for ${colorize(service.alias, 'cyan')}`);
     debug(`[TRACE] Metadata parsed successfully for ${service.alias}`);
   } catch (error) {
-    console.warn(`[OData Recorder] ⚠️ Failed to proactively load metadata for ${service.alias}:`, error instanceof Error ? error.message : error);
+    console.warn(colorize('[OData Recorder]', 'magenta'), colorize('⚠️  Failed to proactively load metadata', 'yellow'), `for ${colorize(service.alias, 'cyan')}:`, error instanceof Error ? error.message : error);
     debug(`[TRACE] Metadata fetch error:`, error);
     // Don't throw - metadata will be loaded on first $metadata request
   }
@@ -350,8 +378,8 @@ function startRecording(runtime: RecorderRuntime, recordingId: string | undefine
   runtime.tenant = recordingId; // Keep using tenant property internally for backward compatibility
   runtime.mode = mode;
   runtime.buffers.clear();
-  const recordingMsg = recordingId ? `with recordingId: ${recordingId}` : 'without recordingId suffix';
-  console.log(`[OData Recorder] 🎬 Recording ACTIVE ${recordingMsg}, mode: ${mode}`);
+  const recordingMsg = recordingId ? `with recordingId: ${colorize(recordingId, 'cyan')}` : 'without recordingId suffix';
+  console.log(colorize('[OData Recorder]', 'magenta'), colorize('🎬 Recording ACTIVE', 'green'), recordingMsg + ', mode:', colorize(mode, 'cyan'));
 }
 
 /**
@@ -430,10 +458,10 @@ function tapResponse(
       // Skip recording for client errors (4xx) and server errors (5xx)
       if (statusCode === 401 || statusCode === 403) {
         debug(`[TRACE] ⚠️ Skipping recording for authentication error (${statusCode}): ${req.path}`);
-        console.log(`[OData Recorder] ⚠️ Skipping recording due to authentication error (${statusCode}) - please authenticate first`);
+        console.log(colorize('[OData Recorder]', 'magenta'), colorize(`⚠️  Skipping recording due to authentication error (${statusCode})`, 'yellow'), '- please authenticate first');
       } else {
         debug(`[TRACE] ⚠️ Skipping recording for error response (${statusCode}): ${req.path}`);
-        console.log(`[OData Recorder] ⚠️ Skipping recording due to error response (${statusCode}): ${req.path}`);
+        console.log(colorize('[OData Recorder]', 'magenta'), colorize(`⚠️  Skipping recording due to error response (${statusCode})`, 'yellow'), `: ${req.path}`);
       }
       return originalEnd(chunk, ...args);
     }
@@ -451,12 +479,12 @@ function tapResponse(
         decompressedBuffer = Buffer.from(result);
         debug(`[TRACE] Decompressed ${encoding}: ${rawBuffer.length} → ${decompressedBuffer.length} bytes`);
       } catch (e) {
-        console.error(`[OData Recorder] Decompression failed for ${req.path}:`, e);
+        console.error(colorize('[OData Recorder]', 'magenta'), colorize('Decompression failed', 'red'), `for ${req.path}:`, e);
         
         // If metadata decompression fails, provide guidance
         if (req.path.includes('$metadata') && config.writeMetadata) {
-          console.error(`[OData Recorder] ❌ Metadata decompression failed - this may indicate a server error`);
-          console.error(`[OData Recorder] 💡 Try refreshing the page or check if the backend is returning valid metadata`);
+          console.error(colorize('[OData Recorder]', 'magenta'), colorize('❌ Metadata decompression failed', 'red'), '- this may indicate a server error');
+          console.error(colorize('[OData Recorder]', 'magenta'), colorize('💡 Try refreshing the page', 'blue'), 'or check if the backend is returning valid metadata');
         }
         
         return originalEnd(chunk, ...args);
@@ -513,7 +541,7 @@ async function processResponse(
   if (response.isMetadata && config.writeMetadata) {
     // Handle 304 Not Modified (should be rare now due to ETag removal)
     if (response.statusCode === 304) {
-      console.warn(`[OData Recorder] ⚠️ Received 304 for metadata despite ETag removal - check if caching headers were properly removed`);
+      console.warn(colorize('[OData Recorder]', 'magenta'), colorize('⚠️  Received 304 for metadata', 'yellow'), 'despite ETag removal - check if caching headers were properly removed');
       debug(`[TRACE] Unexpected 304 response for metadata request`);
       return;
     }
@@ -526,7 +554,7 @@ async function processResponse(
     
     // Validate it's actually XML (not an error response)
     if (!body.includes('<?xml') && !body.includes('<edmx:Edmx')) {
-      console.warn(`[OData Recorder] Skipping invalid metadata for ${service.alias} - not valid XML`);
+      console.warn(colorize('[OData Recorder]', 'magenta'), colorize('Skipping invalid metadata', 'yellow'), `for ${colorize(service.alias, 'cyan')} - not valid XML`);
       debug(`[TRACE] Invalid body (first 200 chars): ${body.substring(0, 200)}`);
       return;
     }
@@ -540,9 +568,9 @@ async function processResponse(
       await parser.parse(body);
       parsers.set(service.alias, parser);
       runtime.metadataCache.set(service.alias, body);
-      console.log(`[OData Recorder] ✓ Metadata updated for ${service.alias}`);
+      console.log(colorize('[OData Recorder]', 'magenta'), colorize('✓ Metadata updated', 'green'), `for ${colorize(service.alias, 'cyan')}`);
     } catch (e) {
-      console.error(`[OData Recorder] Failed to parse metadata for ${service.alias}:`, e);
+      console.error(colorize('[OData Recorder]', 'magenta'), colorize('Failed to parse metadata', 'red'), `for ${colorize(service.alias, 'cyan')}:`, e);
     }
     return;
   }
@@ -560,7 +588,7 @@ async function processResponse(
       debug(`[TRACE] Processing batch item: ${item.url}`);
       await processSingleResponse(item.url, item.body, service, runtime, config, parsers);
     }
-    console.log(`[OData Recorder] Processed ${batchItems.length} batch items`);
+    console.log(colorize('[OData Recorder]', 'magenta'), colorize(`Processed ${batchItems.length} batch items`, 'green'));
     return;
   }
 
@@ -626,7 +654,7 @@ async function processSingleResponse(
       
       if (!targetEntitySet) {
         debug(`[TRACE] ⚠️ No EntitySet mapping found for navigation property: ${expansion.navProperty}`);
-        console.log(`[OData Recorder] ⚠️ Skipping expanded navigation '${expansion.navProperty}' - no EntitySet mapping found in metadata`);
+        console.log(colorize('[OData Recorder]', 'magenta'), colorize('⚠️  Skipping expanded navigation', 'yellow'), `'${expansion.navProperty}' - no EntitySet mapping found in metadata`);
         continue;
       }
       
@@ -649,8 +677,8 @@ async function processSingleResponse(
         } else {
           shouldExtract = false;
           debug(`[TRACE] Auto mode: ${expansion.navProperty} has NO referential constraints -> keeping inline`);
-          console.log(`[OData Recorder] ⚠️ Navigation '${expansion.navProperty}' in '${entitySet}' has no referential constraints - keeping inline data`);
-          console.log(`[OData Recorder] 💡 To enable separate file extraction, add referential constraints to your metadata`);
+          console.log(colorize('[OData Recorder]', 'magenta'), colorize('⚠️  Navigation', 'yellow'), `'${expansion.navProperty}' in '${entitySet}' has no referential constraints - keeping inline data`);
+          console.log(colorize('[OData Recorder]', 'magenta'), colorize('💡 To enable separate file extraction', 'blue'), 'add referential constraints to your metadata');
         }
       }
       
@@ -722,7 +750,8 @@ async function processSingleResponse(
     runtime.buffers.set(bufferKey, merged);
   }
 
-  console.log(`[OData Recorder] Captured ${entities.length} entities for ${entitySet}${runtime.tenant ? ` (recordingId: ${runtime.tenant})` : ''}`);
+  const recordingSuffix = runtime.tenant ? ` (recordingId: ${colorize(runtime.tenant, 'cyan')})` : '';
+  console.log(colorize('[OData Recorder]', 'magenta'), colorize(`Captured ${entities.length} entities`, 'green'), `for ${colorize(entitySet, 'cyan')}${recordingSuffix}`);
 
   // Process and save expanded navigation entities
   for (const [targetEntitySet, expandedEntities] of allExpandedNavigations.entries()) {
@@ -771,7 +800,8 @@ async function processSingleResponse(
       runtime.buffers.set(expandedBufferKey, mergedExpanded);
     }
     
-    console.log(`[OData Recorder] Captured ${expandedEntities.length} expanded entities for ${targetEntitySet}${runtime.tenant ? ` (recordingId: ${runtime.tenant})` : ''}`);
+    const expandedRecordingSuffix = runtime.tenant ? ` (recordingId: ${colorize(runtime.tenant, 'cyan')})` : '';
+    console.log(colorize('[OData Recorder]', 'magenta'), colorize(`Captured ${expandedEntities.length} expanded entities`, 'green'), `for ${colorize(targetEntitySet, 'cyan')}${expandedRecordingSuffix}`);
   }
 }
 
@@ -813,7 +843,7 @@ async function writeMetadata(alias: string, xml: string, config: RecorderConfig)
   
   // Content is different, write the file
   await fs.promises.writeFile(metadataPath, xml, 'utf-8');
-  console.log(`[OData Recorder] 📝 Updated metadata: ${alias}/metadata.xml`);
+  console.log(colorize('[OData Recorder]', 'magenta'), colorize('📝 Updated metadata:', 'green'), `${colorize(alias, 'cyan')}/metadata.xml`);
   debug(`[TRACE] Metadata file written: ${metadataPath} (${xml.length} bytes)`);
 }
 
@@ -840,7 +870,7 @@ async function writeEntities(
     try {
       existing = JSON.parse(content);
     } catch (e) {
-      console.warn(`[OData Recorder] Could not parse existing ${filePath}, overwriting`);
+      console.warn(colorize('[OData Recorder]', 'magenta'), colorize('Could not parse existing', 'yellow'), `${filePath}, overwriting`);
     }
   }
 
@@ -855,7 +885,7 @@ async function writeEntities(
   
   // Content is different, write the file
   await fs.promises.writeFile(filePath, newContent, 'utf-8');
-  console.log(`[OData Recorder] 📝 Updated entities: ${fileName} (${merged.length} entities)`);
+  console.log(colorize('[OData Recorder]', 'magenta'), colorize('📝 Updated entities:', 'green'), `${colorize(fileName, 'cyan')} (${merged.length} entities)`);
 }
 
 /**
@@ -869,7 +899,7 @@ async function flushAllBuffers(
   let count = 0;
   const writes: Promise<void>[] = [];
 
-  console.log(`[OData Recorder] Flushing ${runtime.buffers.size} buffered entity sets...`);
+  console.log(colorize('[OData Recorder]', 'magenta'), colorize(`Flushing ${runtime.buffers.size} buffered entity sets...`, 'blue'));
 
   for (const [bufferKey, entities] of runtime.buffers.entries()) {
     const [alias, tenantStr, entitySet] = bufferKey.split('|');
@@ -880,11 +910,12 @@ async function flushAllBuffers(
       const parser = parsers.get(alias);
       const keys = parser?.getKeysForEntitySet(entitySet) || [];
       
-      console.log(`[OData Recorder] Processing ${entities.length} entities for ${entitySet}${tenant ? ` (recordingId: ${tenant})` : ''}`);
+      const flushRecordingSuffix = tenant ? ` (recordingId: ${colorize(tenant, 'cyan')})` : '';
+      console.log(colorize('[OData Recorder]', 'magenta'), colorize(`Processing ${entities.length} entities`, 'blue'), `for ${colorize(entitySet, 'cyan')}${flushRecordingSuffix}`);
       
       const writePromise = writeEntities(service, entitySet, tenant, entities, keys, parsers)
         .catch(err => {
-          console.error(`[OData Recorder] ✗ Error processing ${bufferKey}:`, err);
+          console.error(colorize('[OData Recorder]', 'magenta'), colorize(`✗ Error processing ${bufferKey}`, 'red'), ':', err);
         });
       
       writes.push(writePromise);
@@ -896,7 +927,7 @@ async function flushAllBuffers(
   await Promise.all(writes);
   
   runtime.buffers.clear();
-  console.log(`[OData Recorder] Flush complete: ${count} entity sets written`);
+  console.log(colorize('[OData Recorder]', 'magenta'), colorize(`Flush complete: ${count} entity sets written`, 'green'));
   return count;
 }
 
