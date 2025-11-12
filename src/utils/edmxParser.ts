@@ -140,6 +140,11 @@ export class EdmxParser {
       if ('relationship' in navProp && navProp.relationship) {
         // Find the association - try multiple name formats
         const relationshipName = navProp.relationship;
+        
+        // DEBUG: Log what we're looking for
+        console.log(`[EdmxParser] Looking for association: ${relationshipName}`);
+        console.log(`[EdmxParser] Available associations:`, this.parsed.schema.associations.map(a => ({ name: a.name, fqn: a.fullyQualifiedName })));
+        
         const association = this.parsed.schema.associations.find(
           a => a.fullyQualifiedName === relationshipName || 
                a.name === relationshipName ||
@@ -148,12 +153,16 @@ export class EdmxParser {
         );
         
         if (!association) {
-          console.debug(`[EdmxParser] Could not find association for relationship: ${relationshipName}`);
-          console.debug(`[EdmxParser] Available associations:`, this.parsed.schema.associations.map(a => ({ name: a.name, fqn: a.fullyQualifiedName })));
+          console.warn(`[EdmxParser] ⚠️ Could not find association for relationship: ${relationshipName}`);
           continue;
         }
         
+        console.log(`[EdmxParser] ✓ Found association: ${association.name}`);
+        
         // Find the association set that references this association
+        console.log(`[EdmxParser] Looking for association set for: ${association.name} (fqn: ${association.fullyQualifiedName})`);
+        console.log(`[EdmxParser] Available association sets:`, this.parsed.schema.associationSets.map(as => ({ association: as.association, ends: as.associationEnd })));
+        
         const associationSet = this.parsed.schema.associationSets.find(
           as => as.association === association.fullyQualifiedName || 
                as.association === association.name ||
@@ -162,10 +171,11 @@ export class EdmxParser {
         );
         
         if (!associationSet) {
-          console.debug(`[EdmxParser] Could not find association set for association: ${association.name}`);
-          console.debug(`[EdmxParser] Available association sets:`, this.parsed.schema.associationSets.map(as => ({ association: as.association })));
+          console.warn(`[EdmxParser] ⚠️ Could not find association set for association: ${association.name}`);
           continue;
         }
+        
+        console.log(`[EdmxParser] ✓ Found association set, looking for ToRole: ${navProp.toRole}`);
         
         // Find the target EntitySet using the ToRole
         const toRole = navProp.toRole;
