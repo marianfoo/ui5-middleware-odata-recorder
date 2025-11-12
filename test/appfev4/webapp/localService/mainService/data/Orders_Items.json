@@ -1,12 +1,29 @@
 [
   {
+    "up__ID": "64e718c9-ff99-47f1-8ca3-950c850777d4",
     "ID": "e9641166-e050-4261-bfee-d1e797e6cb7f",
-    "price": 28,
     "product_ID": "252",
     "quantity": 2,
     "title": "Eleonora",
-    "up__ID": "64e718c9-ff99-47f1-8ca3-950c850777d4",
-    "HasActiveEntity": false,
+    "price": 28,
+    "IsActiveEntity": true
+  },
+  {
+    "up__ID": "7e2f2640-6866-4dcf-8f4d-3027aa831cad",
+    "ID": "58040e66-1dcd-4ffb-ab10-fdce32028b79",
+    "product_ID": "201",
+    "quantity": 1,
+    "title": "Wuthering Heights",
+    "price": 11.11,
+    "IsActiveEntity": true
+  },
+  {
+    "up__ID": "7e2f2640-6866-4dcf-8f4d-3027aa831cad",
+    "ID": "64e718c9-ff99-47f1-8ca3-950c850777d4",
+    "product_ID": "271",
+    "quantity": 1,
+    "title": "Catweazle",
+    "price": 15,
     "IsActiveEntity": true
   }
 ]

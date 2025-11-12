@@ -27,23 +27,23 @@
           <NavigationPropertyBinding Path="SiblingEntity" Target="Orders"/>
         </EntitySet>
         <EntitySet Name="Customers" EntityType="sap.capire.orders.api.OrdersService.Customers"/>
+        <EntitySet Name="Currencies" EntityType="sap.capire.orders.api.OrdersService.Currencies">
+          <NavigationPropertyBinding Path="texts" Target="Currencies_texts"/>
+          <NavigationPropertyBinding Path="localized" Target="Currencies_texts"/>
+        </EntitySet>
         <EntitySet Name="OrdersNoDraft" EntityType="sap.capire.orders.api.OrdersService.OrdersNoDraft">
           <NavigationPropertyBinding Path="Items" Target="OrdersNoDraft_Items"/>
           <NavigationPropertyBinding Path="customer" Target="Customers"/>
           <NavigationPropertyBinding Path="currency" Target="Currencies"/>
         </EntitySet>
-        <EntitySet Name="Currencies" EntityType="sap.capire.orders.api.OrdersService.Currencies">
-          <NavigationPropertyBinding Path="texts" Target="Currencies_texts"/>
-          <NavigationPropertyBinding Path="localized" Target="Currencies_texts"/>
-        </EntitySet>
         <EntitySet Name="Orders_Items" EntityType="sap.capire.orders.api.OrdersService.Orders_Items">
           <NavigationPropertyBinding Path="up_" Target="Orders"/>
           <NavigationPropertyBinding Path="SiblingEntity" Target="Orders_Items"/>
         </EntitySet>
+        <EntitySet Name="Currencies_texts" EntityType="sap.capire.orders.api.OrdersService.Currencies_texts"/>
         <EntitySet Name="OrdersNoDraft_Items" EntityType="sap.capire.orders.api.OrdersService.OrdersNoDraft_Items">
           <NavigationPropertyBinding Path="up_" Target="OrdersNoDraft"/>
         </EntitySet>
-        <EntitySet Name="Currencies_texts" EntityType="sap.capire.orders.api.OrdersService.Currencies_texts"/>
       </EntityContainer>
       <EntityType Name="Orders">
         <Key>
@@ -73,6 +73,7 @@
         <Property Name="HasDraftEntity" Type="Edm.Boolean" Nullable="false" DefaultValue="false"/>
         <NavigationProperty Name="DraftAdministrativeData" Type="sap.capire.orders.api.OrdersService.DraftAdministrativeData" ContainsTarget="true"/>
         <NavigationProperty Name="SiblingEntity" Type="sap.capire.orders.api.OrdersService.Orders"/>
+        <Property Name="DraftMessages" Type="Collection(sap.capire.orders.api.OrdersService.DRAFT_DraftAdministrativeData_DraftMessage)" Nullable="true"/>
       </EntityType>
       <EntityType Name="Customers">
         <Key>
@@ -83,6 +84,25 @@
         <Property Name="email" Type="Edm.String" MaxLength="100"/>
         <Property Name="country" Type="Edm.String" MaxLength="2"/>
         <Property Name="city" Type="Edm.String" MaxLength="100"/>
+      </EntityType>
+      <EntityType Name="Currencies">
+        <Key>
+          <PropertyRef Name="code"/>
+        </Key>
+        <Property Name="name" Type="Edm.String" MaxLength="255"/>
+        <Property Name="descr" Type="Edm.String" MaxLength="1000"/>
+        <Property Name="code" Type="Edm.String" MaxLength="3" Nullable="false"/>
+        <Property Name="symbol" Type="Edm.String" MaxLength="5"/>
+        <Property Name="minorUnit" Type="Edm.Int16"/>
+        <Property Name="numcode" Type="Edm.Int32"/>
+        <Property Name="exponent" Type="Edm.Int32"/>
+        <Property Name="minor" Type="Edm.String"/>
+        <NavigationProperty Name="texts" Type="Collection(sap.capire.orders.api.OrdersService.Currencies_texts)">
+          <OnDelete Action="Cascade"/>
+        </NavigationProperty>
+        <NavigationProperty Name="localized" Type="sap.capire.orders.api.OrdersService.Currencies_texts">
+          <ReferentialConstraint Property="code" ReferencedProperty="code"/>
+        </NavigationProperty>
       </EntityType>
       <EntityType Name="OrdersNoDraft">
         <Key>
@@ -106,25 +126,6 @@
           <ReferentialConstraint Property="currency_code" ReferencedProperty="code"/>
         </NavigationProperty>
         <Property Name="currency_code" Type="Edm.String" MaxLength="3"/>
-      </EntityType>
-      <EntityType Name="Currencies">
-        <Key>
-          <PropertyRef Name="code"/>
-        </Key>
-        <Property Name="name" Type="Edm.String" MaxLength="255"/>
-        <Property Name="descr" Type="Edm.String" MaxLength="1000"/>
-        <Property Name="code" Type="Edm.String" MaxLength="3" Nullable="false"/>
-        <Property Name="symbol" Type="Edm.String" MaxLength="5"/>
-        <Property Name="minorUnit" Type="Edm.Int16"/>
-        <Property Name="numcode" Type="Edm.Int32"/>
-        <Property Name="exponent" Type="Edm.Int32"/>
-        <Property Name="minor" Type="Edm.String"/>
-        <NavigationProperty Name="texts" Type="Collection(sap.capire.orders.api.OrdersService.Currencies_texts)">
-          <OnDelete Action="Cascade"/>
-        </NavigationProperty>
-        <NavigationProperty Name="localized" Type="sap.capire.orders.api.OrdersService.Currencies_texts">
-          <ReferentialConstraint Property="code" ReferencedProperty="code"/>
-        </NavigationProperty>
       </EntityType>
       <EntityType Name="DraftAdministrativeData">
         <Key>
@@ -159,6 +160,17 @@
         <Property Name="HasDraftEntity" Type="Edm.Boolean" Nullable="false" DefaultValue="false"/>
         <NavigationProperty Name="DraftAdministrativeData" Type="sap.capire.orders.api.OrdersService.DraftAdministrativeData" ContainsTarget="true"/>
         <NavigationProperty Name="SiblingEntity" Type="sap.capire.orders.api.OrdersService.Orders_Items"/>
+        <Property Name="DraftMessages" Type="Collection(sap.capire.orders.api.OrdersService.DRAFT_DraftAdministrativeData_DraftMessage)" Nullable="true"/>
+      </EntityType>
+      <EntityType Name="Currencies_texts">
+        <Key>
+          <PropertyRef Name="locale"/>
+          <PropertyRef Name="code"/>
+        </Key>
+        <Property Name="locale" Type="Edm.String" MaxLength="14" Nullable="false"/>
+        <Property Name="name" Type="Edm.String" MaxLength="255"/>
+        <Property Name="descr" Type="Edm.String" MaxLength="1000"/>
+        <Property Name="code" Type="Edm.String" MaxLength="3" Nullable="false"/>
       </EntityType>
       <EntityType Name="OrdersNoDraft_Items">
         <Key>
@@ -175,16 +187,15 @@
         <Property Name="title" Type="Edm.String"/>
         <Property Name="price" Type="Edm.Double"/>
       </EntityType>
-      <EntityType Name="Currencies_texts">
-        <Key>
-          <PropertyRef Name="locale"/>
-          <PropertyRef Name="code"/>
-        </Key>
-        <Property Name="locale" Type="Edm.String" MaxLength="14" Nullable="false"/>
-        <Property Name="name" Type="Edm.String" MaxLength="255"/>
-        <Property Name="descr" Type="Edm.String" MaxLength="1000"/>
-        <Property Name="code" Type="Edm.String" MaxLength="3" Nullable="false"/>
-      </EntityType>
+      <ComplexType Name="DRAFT_DraftAdministrativeData_DraftMessage">
+        <Property Name="code" Type="Edm.String"/>
+        <Property Name="message" Type="Edm.String"/>
+        <Property Name="target" Type="Edm.String"/>
+        <Property Name="additionalTargets" Type="Collection(Edm.String)" Nullable="true"/>
+        <Property Name="transition" Type="Edm.Boolean"/>
+        <Property Name="numericSeverity" Type="Edm.Byte"/>
+        <Property Name="longtextUrl" Type="Edm.String"/>
+      </ComplexType>
       <Action Name="draftPrepare" IsBound="true" EntitySetPath="in">
         <Parameter Name="in" Type="sap.capire.orders.api.OrdersService.Orders"/>
         <Parameter Name="SideEffectsQualifier" Type="Edm.String"/>
@@ -204,6 +215,9 @@
         <Parameter Name="PreserveChanges" Type="Edm.Boolean"/>
         <ReturnType Type="sap.capire.orders.api.OrdersService.Orders"/>
       </Action>
+      <Annotations Target="sap.capire.orders.api.OrdersService.EntityContainer">
+        <Annotation Term="Common.AddressViaNavigationPath" Bool="true"/>
+      </Annotations>
       <Annotations Target="sap.capire.orders.api.OrdersService.Orders">
         <Annotation Term="UI.SelectionFields">
           <Collection>
@@ -331,6 +345,23 @@
             </PropertyValue>
           </Record>
         </Annotation>
+        <Annotation Term="Common.SideEffects" Qualifier="alwaysFetchMessages">
+          <Record Type="Common.SideEffectsType">
+            <PropertyValue Property="SourceEntities">
+              <Collection>
+                <NavigationPropertyPath></NavigationPropertyPath>
+              </Collection>
+            </PropertyValue>
+            <PropertyValue Property="TargetProperties">
+              <Collection>
+                <String>DraftMessages</String>
+              </Collection>
+            </PropertyValue>
+          </Record>
+        </Annotation>
+        <Annotation Term="Common.Messages">
+          <Path>DraftMessages</Path>
+        </Annotation>
       </Annotations>
       <Annotations Target="sap.capire.orders.api.OrdersService.EntityContainer/Orders">
         <Annotation Term="Common.DraftRoot">
@@ -338,6 +369,20 @@
             <PropertyValue Property="ActivationAction" String="sap.capire.orders.api.OrdersService.draftActivate"/>
             <PropertyValue Property="EditAction" String="sap.capire.orders.api.OrdersService.draftEdit"/>
             <PropertyValue Property="PreparationAction" String="sap.capire.orders.api.OrdersService.draftPrepare"/>
+          </Record>
+        </Annotation>
+        <Annotation Term="Common.SideEffects" Qualifier="alwaysFetchMessages">
+          <Record Type="Common.SideEffectsType">
+            <PropertyValue Property="SourceEntities">
+              <Collection>
+                <NavigationPropertyPath></NavigationPropertyPath>
+              </Collection>
+            </PropertyValue>
+            <PropertyValue Property="TargetProperties">
+              <Collection>
+                <String>DraftMessages</String>
+              </Collection>
+            </PropertyValue>
           </Record>
         </Annotation>
       </Annotations>
@@ -442,6 +487,9 @@
       <Annotations Target="sap.capire.orders.api.OrdersService.Orders/DraftAdministrativeData">
         <Annotation Term="UI.Hidden" Bool="true"/>
       </Annotations>
+      <Annotations Target="sap.capire.orders.api.OrdersService.Orders/DraftMessages">
+        <Annotation Term="Core.Computed" Bool="true"/>
+      </Annotations>
       <Annotations Target="sap.capire.orders.api.OrdersService.Customers/ID">
         <Annotation Term="Core.ComputedDefaultValue" Bool="true"/>
       </Annotations>
@@ -456,6 +504,31 @@
       </Annotations>
       <Annotations Target="sap.capire.orders.api.OrdersService.Customers/city">
         <Annotation Term="Common.Label" String="City"/>
+      </Annotations>
+      <Annotations Target="sap.capire.orders.api.OrdersService.Currencies">
+        <Annotation Term="UI.Identification">
+          <Collection>
+            <Record Type="UI.DataField">
+              <PropertyValue Property="Value" Path="name"/>
+            </Record>
+          </Collection>
+        </Annotation>
+      </Annotations>
+      <Annotations Target="sap.capire.orders.api.OrdersService.Currencies/name">
+        <Annotation Term="Common.Label" String="Name"/>
+      </Annotations>
+      <Annotations Target="sap.capire.orders.api.OrdersService.Currencies/descr">
+        <Annotation Term="Common.Label" String="Description"/>
+      </Annotations>
+      <Annotations Target="sap.capire.orders.api.OrdersService.Currencies/code">
+        <Annotation Term="Common.Text" Path="name"/>
+        <Annotation Term="Common.Label" String="Currency Code"/>
+      </Annotations>
+      <Annotations Target="sap.capire.orders.api.OrdersService.Currencies/symbol">
+        <Annotation Term="Common.Label" String="Currency Symbol"/>
+      </Annotations>
+      <Annotations Target="sap.capire.orders.api.OrdersService.Currencies/minorUnit">
+        <Annotation Term="Common.Label" String="Currency Minor Unit Fractions"/>
       </Annotations>
       <Annotations Target="sap.capire.orders.api.OrdersService.OrdersNoDraft/ID">
         <Annotation Term="Core.ComputedDefaultValue" Bool="true"/>
@@ -519,31 +592,6 @@
           </Record>
         </Annotation>
         <Annotation Term="Core.Description" String="Currency code as specified by ISO 4217"/>
-      </Annotations>
-      <Annotations Target="sap.capire.orders.api.OrdersService.Currencies">
-        <Annotation Term="UI.Identification">
-          <Collection>
-            <Record Type="UI.DataField">
-              <PropertyValue Property="Value" Path="name"/>
-            </Record>
-          </Collection>
-        </Annotation>
-      </Annotations>
-      <Annotations Target="sap.capire.orders.api.OrdersService.Currencies/name">
-        <Annotation Term="Common.Label" String="Name"/>
-      </Annotations>
-      <Annotations Target="sap.capire.orders.api.OrdersService.Currencies/descr">
-        <Annotation Term="Common.Label" String="Description"/>
-      </Annotations>
-      <Annotations Target="sap.capire.orders.api.OrdersService.Currencies/code">
-        <Annotation Term="Common.Text" Path="name"/>
-        <Annotation Term="Common.Label" String="Currency Code"/>
-      </Annotations>
-      <Annotations Target="sap.capire.orders.api.OrdersService.Currencies/symbol">
-        <Annotation Term="Common.Label" String="Currency Symbol"/>
-      </Annotations>
-      <Annotations Target="sap.capire.orders.api.OrdersService.Currencies/minorUnit">
-        <Annotation Term="Common.Label" String="Currency Minor Unit Fractions"/>
       </Annotations>
       <Annotations Target="sap.capire.orders.api.OrdersService.DraftAdministrativeData">
         <Annotation Term="Common.Label" String="Draft Administrative Data"/>
@@ -621,11 +669,42 @@
             </Record>
           </Collection>
         </Annotation>
+        <Annotation Term="Common.SideEffects" Qualifier="alwaysFetchMessages">
+          <Record Type="Common.SideEffectsType">
+            <PropertyValue Property="SourceEntities">
+              <Collection>
+                <NavigationPropertyPath></NavigationPropertyPath>
+              </Collection>
+            </PropertyValue>
+            <PropertyValue Property="TargetProperties">
+              <Collection>
+                <String>DraftMessages</String>
+              </Collection>
+            </PropertyValue>
+          </Record>
+        </Annotation>
+        <Annotation Term="Common.Messages">
+          <Path>DraftMessages</Path>
+        </Annotation>
       </Annotations>
       <Annotations Target="sap.capire.orders.api.OrdersService.EntityContainer/Orders_Items">
         <Annotation Term="Common.DraftNode">
           <Record Type="Common.DraftNodeType">
             <PropertyValue Property="PreparationAction" String="sap.capire.orders.api.OrdersService.draftPrepare"/>
+          </Record>
+        </Annotation>
+        <Annotation Term="Common.SideEffects" Qualifier="alwaysFetchMessages">
+          <Record Type="Common.SideEffectsType">
+            <PropertyValue Property="SourceEntities">
+              <Collection>
+                <NavigationPropertyPath></NavigationPropertyPath>
+              </Collection>
+            </PropertyValue>
+            <PropertyValue Property="TargetProperties">
+              <Collection>
+                <String>DraftMessages</String>
+              </Collection>
+            </PropertyValue>
           </Record>
         </Annotation>
       </Annotations>
@@ -654,8 +733,8 @@
       <Annotations Target="sap.capire.orders.api.OrdersService.Orders_Items/DraftAdministrativeData">
         <Annotation Term="UI.Hidden" Bool="true"/>
       </Annotations>
-      <Annotations Target="sap.capire.orders.api.OrdersService.OrdersNoDraft_Items/ID">
-        <Annotation Term="Core.ComputedDefaultValue" Bool="true"/>
+      <Annotations Target="sap.capire.orders.api.OrdersService.Orders_Items/DraftMessages">
+        <Annotation Term="Core.Computed" Bool="true"/>
       </Annotations>
       <Annotations Target="sap.capire.orders.api.OrdersService.Currencies_texts/locale">
         <Annotation Term="Common.Label" String="Language Code"/>
@@ -669,6 +748,9 @@
       <Annotations Target="sap.capire.orders.api.OrdersService.Currencies_texts/code">
         <Annotation Term="Common.Text" Path="name"/>
         <Annotation Term="Common.Label" String="Currency Code"/>
+      </Annotations>
+      <Annotations Target="sap.capire.orders.api.OrdersService.OrdersNoDraft_Items/ID">
+        <Annotation Term="Core.ComputedDefaultValue" Bool="true"/>
       </Annotations>
     </Schema>
   </edmx:DataServices>

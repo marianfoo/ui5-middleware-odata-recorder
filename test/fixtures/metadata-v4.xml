@@ -30,7 +30,9 @@
         <Property Name="quantity" Type="Edm.Int32"/>
       </EntityType>
       <EntityContainer Name="EntityContainer">
-        <EntitySet Name="Orders" EntityType="OrdersService.Orders"/>
+        <EntitySet Name="Orders" EntityType="OrdersService.Orders">
+          <NavigationPropertyBinding Path="customer" Target="Customers"/>
+        </EntitySet>
         <EntitySet Name="Customers" EntityType="OrdersService.Customers"/>
         <EntitySet Name="OrderItems" EntityType="OrdersService.OrderItems"/>
       </EntityContainer>

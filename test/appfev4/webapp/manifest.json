@@ -162,6 +162,18 @@
                       "visible": true,
                       "enabled": true,
                       "text": "Show Available Books"
+                    },
+                    "LoadOrderWithItems": {
+                      "press": "appfev4.ext.controller.ListReportExt.onLoadOrderWithExpandedItems",
+                      "visible": true,
+                      "enabled": true,
+                      "text": "Demo: Order + Items"
+                    },
+                    "LoadOrdersMultiExpand": {
+                      "press": "appfev4.ext.controller.ListReportExt.onLoadOrdersWithMultipleExpands",
+                      "visible": true,
+                      "enabled": true,
+                      "text": "Demo: Orders + Items + Customer"
                     }
                   }
                 }

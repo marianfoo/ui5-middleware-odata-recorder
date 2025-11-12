@@ -44,10 +44,12 @@ server:
       beforeMiddleware: fiori-tools-proxy
       configuration:
         controlEndpoints: true        # default: true - Enable /__recorder/* HTTP endpoints
-        autoSave: "stream"            # default: "stream" - Options: "stream" | "onStop"
+        autoSave: "stream"    # default: "stream" - Options: "stream" | "onStop"
+        autoStart: true
         writeMetadata: true           # default: true - Capture and write $metadata
-        defaultTenant: "100"          # default: "100" - Default recordingId if not in request URL
+        # defaultTenant: "100"          # default: "100" - Default recordingId if not in request URL
         debug: true                   # default: false - Enable debug logging
+        backendUrl: "http://localhost:4006"  # Backend URL for proactive metadata fetching
         redact: []                    # default: [] - Field names to remove from entities (e.g. ["Token", "Password"])
         services:
           - alias: mainService

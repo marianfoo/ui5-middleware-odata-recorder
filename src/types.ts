@@ -2,6 +2,9 @@
  * Type definitions for the OData recorder middleware
  */
 
+// Expanded navigation extraction strategy
+export type ExpandedNavigationStrategy = 'auto' | 'always-separate' | 'always-inline';
+
 // Middleware service config
 export type ServiceConfig = {
   alias: string;                 // e.g., "ODATA_HU_SRV"
@@ -17,6 +20,9 @@ export type RecorderConfig = {
   defaultTenant?: string; // optional - undefined means no recordingId suffix (kept as defaultTenant for config compatibility)
   autoStart: boolean;
   removeSelectParams?: boolean; // optional - remove $select from requests to get full entities
+  expandedNavigationStrategy?: ExpandedNavigationStrategy; // optional - how to handle expanded navigations (default: 'auto')
+  enrichForeignKeys?: boolean; // optional - inject missing FK fields when extracting (default: true)
+  backendUrl?: string; // optional - backend URL for proactive metadata fetching (e.g., "http://localhost:4004")
   redact?: string[];
   services: ServiceConfig[];
 };
@@ -52,4 +58,14 @@ export interface BatchItem {
   url: string;
   body: string;
   statusCode: number;
+}
+
+export interface ExpandedNavigation {
+  navProperty: string;
+  entities: any[];
+}
+
+export interface NavigationMapping {
+  propertyName: string;
+  targetEntitySet: string;
 }

@@ -6,6 +6,8 @@ import { Request, Response, NextFunction, RequestHandler } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as zlib from 'zlib';
+import * as http from 'http';
+import * as https from 'https';
 import { RecorderConfig, RecorderRuntime, BufferKey, ServiceConfig, ODataResponse } from '../types';
 import { EdmxParser } from '../utils/edmxParser';
 import { ODataParser } from '../utils/odataParser';
@@ -38,6 +40,9 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
     defaultTenant: rawConfig.defaultTenant, // undefined if not specified
     autoStart: rawConfig.autoStart ?? false,
     removeSelectParams: rawConfig.removeSelectParams ?? true,
+    expandedNavigationStrategy: rawConfig.expandedNavigationStrategy ?? 'auto',
+    enrichForeignKeys: rawConfig.enrichForeignKeys ?? true,
+    backendUrl: rawConfig.backendUrl, // undefined if not specified
     redact: rawConfig.redact ?? [],
     services: rawConfig.services ?? []
   };
@@ -56,6 +61,9 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
   console.log('  Auto Save Mode:', config.autoSave);
   console.log('  Auto Start:', config.autoStart ? '✓ Enabled' : '✗ Disabled');
   console.log('  Remove $select:', config.removeSelectParams ? '✓ Enabled (full entities)' : '✗ Disabled');
+  console.log('  Expanded Nav Strategy:', config.expandedNavigationStrategy);
+  console.log('  Enrich Foreign Keys:', config.enrichForeignKeys ? '✓ Enabled' : '✗ Disabled');
+  console.log('  Backend URL:', config.backendUrl || 'None (no proactive metadata fetch)');
   console.log('  Default Recording ID:', config.defaultTenant || 'None (no suffix)');
   console.log('  Services:');
   config.services.forEach(s => {
@@ -75,7 +83,7 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
     metadataCache: new Map()
   };
 
-  // If auto-start is enabled, announce it
+  // If auto-start is enabled, announce it and load metadata
   if (config.autoStart) {
     const recordingMsg = config.defaultTenant 
       ? `with recordingId: ${config.defaultTenant}` 
@@ -84,6 +92,15 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
   }
 
   const parsers = new Map<string, EdmxParser>(); // alias -> parser
+
+  // Proactively load metadata for all services if auto-start is enabled
+  if (config.autoStart) {
+    for (const service of config.services) {
+      loadMetadataForService(service, runtime, parsers, config, config.backendUrl).catch(err => {
+        debug(`[TRACE] Failed to load metadata for ${service.alias}:`, err);
+      });
+    }
+  }
 
   return async (req: Request, res: Response, next: NextFunction) => {
     // Log EVERY request that comes through
@@ -103,6 +120,13 @@ export default function createMiddleware({ options, middlewareUtil }: any): Requ
       startRecording(runtime, recordingId, config.autoSave);
       const recordingMsg = recordingId ? `with recordingId: ${recordingId}` : 'without recordingId suffix';
       console.log(`[OData Recorder] Auto-started recording ${recordingMsg}`);
+      
+      // Proactively load metadata for all services
+      for (const service of config.services) {
+        loadMetadataForService(service, runtime, parsers, config, config.backendUrl).catch(err => {
+          debug(`[TRACE] Failed to load metadata for ${service.alias}:`, err);
+        });
+      }
     }
 
     // If not recording, just pass through
@@ -215,6 +239,14 @@ async function handleControlEndpoint(
       const recordingId = extractRecordingId(req, config);
       const mode = (req.query.mode as 'onStop' | 'stream') || config.autoSave;
       startRecording(runtime, recordingId, mode);
+      
+      // Proactively load metadata for all services
+      for (const service of config.services) {
+        loadMetadataForService(service, runtime, parsers, config, config.backendUrl).catch(err => {
+          debug(`[TRACE] Failed to load metadata for ${service.alias}:`, err);
+        });
+      }
+      
       res.json({ status: 'started', recordingId, mode });
       break;
 
@@ -246,6 +278,72 @@ async function handleControlEndpoint(
 /**
  * Start recording
  */
+/**
+ * Proactively fetch and parse metadata for a service
+ * This ensures navigation property mappings are available before data requests arrive
+ */
+async function loadMetadataForService(
+  service: ServiceConfig,
+  runtime: RecorderRuntime,
+  parsers: Map<string, EdmxParser>,
+  config: RecorderConfig,
+  backendUrl?: string
+): Promise<void> {
+  // Skip if already loaded
+  if (parsers.has(service.alias)) {
+    debug(`[TRACE] Metadata already loaded for ${service.alias}`);
+    return;
+  }
+
+  // Skip if no backend URL configured
+  if (!backendUrl) {
+    debug(`[TRACE] No backendUrl configured, skipping proactive metadata fetch for ${service.alias}`);
+    console.log(`[OData Recorder] ℹ️ Skipping proactive metadata fetch for ${service.alias} - no backendUrl configured`);
+    return;
+  }
+
+  // Construct metadata URL
+  const metadataPath = `${service.basePath}$metadata`;
+  const metadataUrl = `${backendUrl}${metadataPath}`;
+  
+  debug(`[TRACE] Proactively fetching metadata from: ${metadataUrl}`);
+  
+  try {
+    const protocol = metadataUrl.startsWith('https') ? https : http;
+    const xmlData = await new Promise<string>((resolve, reject) => {
+      protocol.get(metadataUrl, (res) => {
+        if (res.statusCode !== 200) {
+          reject(new Error(`Metadata fetch failed with status ${res.statusCode}`));
+          return;
+        }
+        
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => resolve(data));
+        res.on('error', reject);
+      }).on('error', reject);
+    });
+    
+    // Parse and cache
+    const parser = new EdmxParser();
+    await parser.parse(xmlData);
+    parsers.set(service.alias, parser);
+    runtime.metadataCache.set(service.alias, xmlData);
+    
+    // Write metadata to disk if configured
+    if (config.writeMetadata) {
+      await writeMetadata(service.alias, xmlData, config);
+    }
+    
+    console.log(`[OData Recorder] ✓ Proactively loaded metadata for ${service.alias}`);
+    debug(`[TRACE] Metadata parsed successfully for ${service.alias}`);
+  } catch (error) {
+    console.warn(`[OData Recorder] ⚠️ Failed to proactively load metadata for ${service.alias}:`, error instanceof Error ? error.message : error);
+    debug(`[TRACE] Metadata fetch error:`, error);
+    // Don't throw - metadata will be loaded on first $metadata request
+  }
+}
+
 function startRecording(runtime: RecorderRuntime, recordingId: string | undefined, mode: 'onStop' | 'stream'): void {
   debug('startRecording called:', { recordingId, mode });
   runtime.active = true;
@@ -506,14 +604,112 @@ async function processSingleResponse(
   debug(`[TRACE] Normalized ${entities.length} entities from ${entitySet}`);
   if (entities.length === 0) return;
 
-  // Get keys for this entity set
+  // Get navigation mappings for this entity set
   const parser = parsers.get(service.alias);
+  const navigationTargets = parser?.getNavigationTargets(entitySet) || new Map();
+  debug(`[TRACE] Navigation targets for ${entitySet}:`, Array.from(navigationTargets.entries()));
+
+  // Process expanded navigations for each entity
+  const allExpandedNavigations: Map<string, any[]> = new Map();
+  const strategy = config.expandedNavigationStrategy || 'auto';
+  
+  for (const entity of entities) {
+    // Extract all expanded navigations from the entity (this modifies the entity, removing expanded data)
+    const expansions = ODataParser.extractExpandedNavigations(entity, service.version);
+    debug(`[TRACE] Found ${expansions.length} expanded navigations in entity`);
+    
+    for (const expansion of expansions) {
+      debug(`[TRACE] Analyzing expanded navigation: ${expansion.navProperty} with ${expansion.entities.length} entities`);
+      
+      // Look up target EntitySet for this navigation property
+      const targetEntitySet = navigationTargets.get(expansion.navProperty);
+      
+      if (!targetEntitySet) {
+        debug(`[TRACE] ⚠️ No EntitySet mapping found for navigation property: ${expansion.navProperty}`);
+        console.log(`[OData Recorder] ⚠️ Skipping expanded navigation '${expansion.navProperty}' - no EntitySet mapping found in metadata`);
+        continue;
+      }
+      
+      // Decide whether to extract based on strategy
+      let shouldExtract = false;
+      
+      if (strategy === 'always-inline') {
+        shouldExtract = false;
+        debug(`[TRACE] Strategy 'always-inline': keeping ${expansion.navProperty} inline`);
+      } else if (strategy === 'always-separate') {
+        shouldExtract = true;
+        debug(`[TRACE] Strategy 'always-separate': extracting ${expansion.navProperty}`);
+      } else {
+        // Auto mode: check for referential constraints
+        const hasConstraints = parser?.hasReferentialConstraints(entitySet, expansion.navProperty) || false;
+        
+        if (hasConstraints) {
+          shouldExtract = true;
+          debug(`[TRACE] Auto mode: ${expansion.navProperty} has referential constraints -> extracting`);
+        } else {
+          shouldExtract = false;
+          debug(`[TRACE] Auto mode: ${expansion.navProperty} has NO referential constraints -> keeping inline`);
+          console.log(`[OData Recorder] ⚠️ Navigation '${expansion.navProperty}' in '${entitySet}' has no referential constraints - keeping inline data`);
+          console.log(`[OData Recorder] 💡 To enable separate file extraction, add referential constraints to your metadata`);
+        }
+      }
+      
+      if (shouldExtract) {
+        debug(`[TRACE] Extracting ${expansion.navProperty} -> EntitySet ${targetEntitySet}`);
+        
+        // Optionally enrich foreign keys
+        if (config.enrichForeignKeys && parser) {
+          const constraints = parser.getReferentialConstraints(entitySet, expansion.navProperty);
+          if (constraints.length > 0) {
+            // For each constraint, we need to ensure the foreign key exists
+            // The constraint maps: parent.sourceProperty -> child.targetProperty
+            // But we also need to ensure parent.sourceProperty exists (for V2 expanded navigations)
+            for (const constraint of constraints) {
+              // If parent is missing the source property (foreign key), inject it from the first child
+              if (!(constraint.sourceProperty in entity) && expansion.entities.length > 0) {
+                const firstChild = expansion.entities[0];
+                if (constraint.targetProperty in firstChild) {
+                  entity[constraint.sourceProperty] = firstChild[constraint.targetProperty];
+                  debug(`[TRACE] Enriched parent FK: ${constraint.sourceProperty} = ${firstChild[constraint.targetProperty]}`);
+                }
+              }
+              
+              // Also enrich children if they're missing the target property
+              for (const childEntity of expansion.entities) {
+                if (!(constraint.targetProperty in childEntity) && constraint.sourceProperty in entity) {
+                  childEntity[constraint.targetProperty] = entity[constraint.sourceProperty];
+                  debug(`[TRACE] Enriched child FK: ${constraint.targetProperty} = ${entity[constraint.sourceProperty]}`);
+                }
+              }
+            }
+          }
+        }
+        
+        // Accumulate entities for this target EntitySet
+        const existing = allExpandedNavigations.get(targetEntitySet) || [];
+        allExpandedNavigations.set(targetEntitySet, [...existing, ...expansion.entities]);
+      } else {
+        // Keep inline - need to put the data back into the entity
+        debug(`[TRACE] Keeping ${expansion.navProperty} inline in ${entitySet}`);
+        // Put the expanded data back
+        if (expansion.entities.length === 1 && !Array.isArray(entity[expansion.navProperty])) {
+          // Single entity navigation
+          entity[expansion.navProperty] = expansion.entities[0];
+        } else {
+          // Collection navigation
+          entity[expansion.navProperty] = expansion.entities;
+        }
+      }
+    }
+  }
+
+  // Get keys for the main entity set
   const keys = parser?.getKeysForEntitySet(entitySet) || [];
 
-  // Redact sensitive fields
+  // Redact sensitive fields from main entities
   const redacted = entities.map(e => EntityMerger.redact(e, config.redact || []));
 
-  // Buffer or write (tenant can be undefined)
+  // Save main entities
   const bufferKey: BufferKey = createBufferKey(service.alias, runtime.tenant, entitySet);
   
   if (runtime.mode === 'stream') {
@@ -527,6 +723,56 @@ async function processSingleResponse(
   }
 
   console.log(`[OData Recorder] Captured ${entities.length} entities for ${entitySet}${runtime.tenant ? ` (recordingId: ${runtime.tenant})` : ''}`);
+
+  // Process and save expanded navigation entities
+  for (const [targetEntitySet, expandedEntities] of allExpandedNavigations.entries()) {
+    debug(`[TRACE] Processing ${expandedEntities.length} expanded entities for ${targetEntitySet}`);
+    
+    // Get keys for the target entity set
+    const targetKeys = parser?.getKeysForEntitySet(targetEntitySet) || [];
+    
+    // Recursively process expanded entities (they may have their own expansions)
+    for (const expandedEntity of expandedEntities) {
+      const nestedExpansions = ODataParser.extractExpandedNavigations(expandedEntity, service.version);
+      
+      if (nestedExpansions.length > 0) {
+        debug(`[TRACE] Found ${nestedExpansions.length} nested expansions in ${targetEntitySet}`);
+        
+        // Get navigation targets for the expanded entity set
+        const nestedNavTargets = parser?.getNavigationTargets(targetEntitySet) || new Map();
+        
+        for (const nestedExpansion of nestedExpansions) {
+          const nestedTargetEntitySet = nestedNavTargets.get(nestedExpansion.navProperty);
+          
+          if (nestedTargetEntitySet) {
+            debug(`[TRACE] Processing nested navigation: ${nestedExpansion.navProperty} -> ${nestedTargetEntitySet}`);
+            
+            // Accumulate nested entities
+            const nestedExisting = allExpandedNavigations.get(nestedTargetEntitySet) || [];
+            allExpandedNavigations.set(nestedTargetEntitySet, [...nestedExisting, ...nestedExpansion.entities]);
+          }
+        }
+      }
+    }
+    
+    // Redact sensitive fields from expanded entities
+    const redactedExpanded = expandedEntities.map(e => EntityMerger.redact(e, config.redact || []));
+    
+    // Save expanded entities
+    const expandedBufferKey: BufferKey = createBufferKey(service.alias, runtime.tenant, targetEntitySet);
+    
+    if (runtime.mode === 'stream') {
+      // Immediately write to file
+      await writeEntities(service, targetEntitySet, runtime.tenant, redactedExpanded, targetKeys, parsers);
+    } else {
+      // Buffer for later
+      const existingExpanded = runtime.buffers.get(expandedBufferKey) || [];
+      const mergedExpanded = EntityMerger.merge(existingExpanded, redactedExpanded, targetKeys);
+      runtime.buffers.set(expandedBufferKey, mergedExpanded);
+    }
+    
+    console.log(`[OData Recorder] Captured ${expandedEntities.length} expanded entities for ${targetEntitySet}${runtime.tenant ? ` (recordingId: ${runtime.tenant})` : ''}`);
+  }
 }
 
 /**

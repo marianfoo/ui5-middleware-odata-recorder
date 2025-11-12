@@ -1,7 +1,7 @@
 /**
  * OData response parser for V2 and V4
  */
-import { BatchItem } from '../types';
+import { BatchItem, ExpandedNavigation } from '../types';
 
 export class ODataParser {
   /**
@@ -204,5 +204,103 @@ export class ODataParser {
     // Remove (key) part: "Products(1)" -> "Products"
     const parenIndex = firstSegment.indexOf('(');
     return parenIndex !== -1 ? firstSegment.substring(0, parenIndex) : firstSegment;
+  }
+
+  /**
+   * Extract expanded navigation properties from an entity
+   * Detects and extracts navigation properties that have been expanded with actual data
+   * Ignores deferred links (V2: __deferred, V4: not present or null)
+   * Removes expanded data from the original entity (keeping only references)
+   * 
+   * @param entity The entity object to process (will be modified in place)
+   * @param version OData version (v2 or v4)
+   * @returns Array of expanded navigations with their entities
+   */
+  static extractExpandedNavigations(entity: any, version: 'v2' | 'v4'): ExpandedNavigation[] {
+    const expansions: ExpandedNavigation[] = [];
+    
+    if (!entity || typeof entity !== 'object') {
+      return expansions;
+    }
+    
+    // Get all property names to check
+    const propertyNames = Object.keys(entity);
+    
+    for (const propName of propertyNames) {
+      // Skip metadata and special properties
+      if (propName === '__metadata' || propName === '@odata.context' || 
+          propName === '@odata.etag' || propName === '@odata.id' ||
+          propName === '@odata.editLink' || propName === '@odata.readLink' ||
+          propName === '@odata.type' || propName === '@odata.mediaEditLink' ||
+          propName === '@odata.mediaReadLink' || propName === '@odata.mediaContentType' ||
+          propName.startsWith('__') || propName.startsWith('@')) {
+        continue;
+      }
+      
+      const propValue = entity[propName];
+      
+      // Skip null or undefined
+      if (propValue === null || propValue === undefined) {
+        continue;
+      }
+      
+      // V2: Check for deferred link and skip it
+      if (version === 'v2' && typeof propValue === 'object' && '__deferred' in propValue) {
+        // This is a deferred link, ignore it
+        continue;
+      }
+      
+      // Check if this is an expanded navigation
+      let expandedEntities: any[] = [];
+      
+      if (version === 'v2') {
+        // V2 expanded collection: { results: [...] }
+        if (typeof propValue === 'object' && 'results' in propValue && Array.isArray(propValue.results)) {
+          expandedEntities = propValue.results;
+          // Remove the expanded data from the parent entity
+          delete entity[propName];
+        }
+        // V2 expanded single entity: { __metadata: {...}, ID: "...", ... }
+        else if (typeof propValue === 'object' && '__metadata' in propValue) {
+          expandedEntities = [propValue];
+          // Remove the expanded data from the parent entity
+          delete entity[propName];
+        }
+      } else {
+        // V4 expanded collection: [...] (array directly)
+        if (Array.isArray(propValue)) {
+          // Check if array contains entity-like objects (not just primitives)
+          if (propValue.length > 0 && typeof propValue[0] === 'object') {
+            expandedEntities = propValue;
+            // Remove the expanded data from the parent entity
+            delete entity[propName];
+          }
+        }
+        // V4 expanded single entity: { ID: "...", ... }
+        else if (typeof propValue === 'object') {
+          // Check if this looks like an entity (has multiple properties, not a complex type)
+          // Complex types typically have fewer properties and no ID/keys
+          const objKeys = Object.keys(propValue).filter(k => !k.startsWith('@'));
+          
+          // Heuristic: if it has multiple properties and looks like an entity, treat it as expanded
+          // We need to be careful not to treat complex types (like addresses) as expanded entities
+          // A simple heuristic: if it has at least 2 non-annotation properties, consider it an entity
+          if (objKeys.length >= 2) {
+            expandedEntities = [propValue];
+            // Remove the expanded data from the parent entity
+            delete entity[propName];
+          }
+        }
+      }
+      
+      if (expandedEntities.length > 0) {
+        expansions.push({
+          navProperty: propName,
+          entities: expandedEntities
+        });
+      }
+    }
+    
+    return expansions;
   }
 }

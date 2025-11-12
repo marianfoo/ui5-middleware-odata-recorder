@@ -128,6 +128,24 @@
                     "text": "Show Available Books",
                     "press": "onShowBooks",
                     "requiresSelection": false
+                  },
+                  "LoadCustomerWithOrdersAction": {
+                    "id": "loadCustomerWithOrdersButton",
+                    "text": "Demo: Customer + Orders",
+                    "press": "onLoadCustomerWithExpandedOrders",
+                    "requiresSelection": false
+                  },
+                  "LoadOrdersWithCustomerAction": {
+                    "id": "loadOrdersWithCustomerButton",
+                    "text": "Demo: Orders + Customer",
+                    "press": "onLoadOrdersWithExpandedCustomer",
+                    "requiresSelection": false
+                  },
+                  "LoadOrdersDeferredAction": {
+                    "id": "loadOrdersDeferredButton",
+                    "text": "Demo: Deferred Nav",
+                    "press": "onLoadOrdersWithDeferredNavigation",
+                    "requiresSelection": false
                   }
                 }
               }

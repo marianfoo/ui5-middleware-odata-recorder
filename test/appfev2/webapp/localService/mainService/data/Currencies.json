@@ -1,0 +1,10 @@
+[
+  {
+    "symbol": "€",
+    "code": "EUR",
+    "__metadata": {
+      "type": "sap.capire.orders.api.OrdersService.Currencies",
+      "uri": "http://localhost:4006/v2/orders/Currencies('EUR')"
+    }
+  }
+]
