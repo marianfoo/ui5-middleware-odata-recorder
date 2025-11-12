@@ -138,19 +138,34 @@ export class EdmxParser {
     for (const navProp of entityType.navigationProperties) {
       // Check if this is V2 navigation property (has relationship property)
       if ('relationship' in navProp && navProp.relationship) {
-        // Find the association
+        // Find the association - try multiple name formats
+        const relationshipName = navProp.relationship;
         const association = this.parsed.schema.associations.find(
-          a => a.fullyQualifiedName === navProp.relationship || a.name === navProp.relationship
+          a => a.fullyQualifiedName === relationshipName || 
+               a.name === relationshipName ||
+               // Try without namespace prefix
+               (relationshipName.includes('.') && a.name === relationshipName.split('.').pop())
         );
         
-        if (!association) continue;
+        if (!association) {
+          console.debug(`[EdmxParser] Could not find association for relationship: ${relationshipName}`);
+          console.debug(`[EdmxParser] Available associations:`, this.parsed.schema.associations.map(a => ({ name: a.name, fqn: a.fullyQualifiedName })));
+          continue;
+        }
         
         // Find the association set that references this association
         const associationSet = this.parsed.schema.associationSets.find(
-          as => as.association === association.fullyQualifiedName || as.association === association.name
+          as => as.association === association.fullyQualifiedName || 
+               as.association === association.name ||
+               // Try with namespace prefix
+               (association.fullyQualifiedName && this.parsed && as.association === `${this.parsed.schema.namespace}.${association.name}`)
         );
         
-        if (!associationSet) continue;
+        if (!associationSet) {
+          console.debug(`[EdmxParser] Could not find association set for association: ${association.name}`);
+          console.debug(`[EdmxParser] Available association sets:`, this.parsed.schema.associationSets.map(as => ({ association: as.association })));
+          continue;
+        }
         
         // Find the target EntitySet using the ToRole
         const toRole = navProp.toRole;
